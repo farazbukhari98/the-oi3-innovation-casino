@@ -23,12 +23,18 @@ import {
 import { ParticipantInsights } from '@/components/control/ParticipantInsights';
 import { FacilitatorInsights } from '@/components/control/FacilitatorInsights';
 
+const DEFAULT_PARTICIPANT_BASE =
+  process.env.NEXT_PUBLIC_PARTICIPANT_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  '';
+
 const DEFAULT_CONFIG = {
   chipsPerType: DEFAULT_CHIPS_PER_TYPE,
   layer1Minutes: Math.round(DEFAULT_LAYER_DURATIONS.layer1 / 60),
   layer2Minutes: Math.round(DEFAULT_LAYER_DURATIONS.layer2 / 60),
   requireDepartment: true,
   allowRevotes: false,
+  participantBaseUrl: DEFAULT_PARTICIPANT_BASE,
 };
 
 function ControlPanelContent() {
@@ -44,7 +50,7 @@ function ControlPanelContent() {
   const { session, loading } = useSession(sessionId);
   const { socket } = useRealtime(sessionId);
 
-  const handleConfigChange = (field: keyof typeof config, value: number | boolean) => {
+  const handleConfigChange = (field: keyof typeof config, value: number | boolean | string) => {
     setConfig((prev) => ({
       ...prev,
       [field]: value,
@@ -56,6 +62,7 @@ function ControlPanelContent() {
     setCreating(true);
 
     try {
+      const sanitizedParticipantBaseUrl = config.participantBaseUrl.trim();
       const response = await fetch('/api/session/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,6 +76,7 @@ function ControlPanelContent() {
             },
             requireDepartment: config.requireDepartment,
             allowRevotes: config.allowRevotes,
+            participantBaseUrl: sanitizedParticipantBaseUrl || undefined,
           },
         }),
       });
@@ -199,6 +207,22 @@ function ControlPanelContent() {
                     />
                     Allow participants to re-submit allocations
                   </label>
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="block text-xs uppercase tracking-[0.28em] text-gray-400">
+                    Participant Join URL
+                  </label>
+                  <input
+                    type="url"
+                    inputMode="url"
+                    value={config.participantBaseUrl}
+                    onChange={(event) => handleConfigChange('participantBaseUrl', event.target.value)}
+                    placeholder="https://the-oi3-innovation-casino.onrender.com"
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-casino-gold focus:outline-none"
+                  />
+                  <p className="text-xs text-gray-400">
+                    This base URL powers the QR code and join links. Use the address players should visit (for example, your Render deployment).
+                  </p>
                 </div>
               </div>
 
@@ -348,7 +372,10 @@ function ControlPanelContent() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-6">
               <SessionInfo session={session} />
-              <QRCodeDisplay sessionId={session.id} />
+              <QRCodeDisplay
+                sessionId={session.id}
+                participantBaseUrl={session.settings.participantBaseUrl}
+              />
             </div>
 
             <div className="lg:col-span-1">

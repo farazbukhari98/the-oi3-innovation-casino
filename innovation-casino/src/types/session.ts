@@ -27,6 +27,7 @@ export interface SessionSettings {
   requireDepartment: boolean;
   allowRevotes: boolean;
   chipsPerType: number;
+  participantBaseUrl?: string;
   layerDurations: {
     layer1: number;
     layer2: number;

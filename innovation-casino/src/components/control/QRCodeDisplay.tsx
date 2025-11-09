@@ -1,24 +1,42 @@
 'use client';
 
 import { QRCodeSVG } from 'qrcode.react';
-import { useState } from 'react';
+import { useId, useMemo, useState } from 'react';
+import { getSessionQRUrl } from '@/lib/utils';
 
 interface QRCodeDisplayProps {
   sessionId: string;
+  participantBaseUrl?: string;
 }
 
-export function QRCodeDisplay({ sessionId }: QRCodeDisplayProps) {
-  const joinUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/join?session=${sessionId}`;
+export function QRCodeDisplay({ sessionId, participantBaseUrl }: QRCodeDisplayProps) {
   const [copied, setCopied] = useState(false);
+  const qrElementId = useId();
+  const runtimeOrigin = typeof window !== 'undefined' ? window.location.origin : undefined;
+  const joinUrl = useMemo(
+    () =>
+      getSessionQRUrl(sessionId, {
+        baseUrl: participantBaseUrl,
+        fallbackOrigin: runtimeOrigin,
+      }),
+    [sessionId, participantBaseUrl, runtimeOrigin]
+  );
+  const hasConfiguredBase =
+    Boolean(participantBaseUrl && participantBaseUrl.trim().length > 0) ||
+    Boolean(process.env.NEXT_PUBLIC_PARTICIPANT_BASE_URL?.trim());
+  const shareReady = hasConfiguredBase || Boolean(runtimeOrigin);
 
   const handleCopy = () => {
+    if (!shareReady) return;
     navigator.clipboard.writeText(joinUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownload = () => {
-    const svg = document.getElementById('qr-code-svg');
+    if (!shareReady) return;
+
+    const svg = document.getElementById(qrElementId);
     if (!svg) return;
 
     const svgData = new XMLSerializer().serializeToString(svg);
@@ -85,39 +103,59 @@ export function QRCodeDisplay({ sessionId }: QRCodeDisplayProps) {
 
               {/* QR Code */}
               <div className="absolute inset-[16px] flex items-center justify-center">
-                <QRCodeSVG
-                  id="qr-code-svg"
-                  value={joinUrl}
-                  size={208}
-                  level="H"
-                  fgColor="#0a0a0a"
-                  bgColor="transparent"
-                  includeMargin={false}
-                  style={{ width: '100%', height: '100%', borderRadius: '50%' }}
-                />
+                {shareReady ? (
+                  <QRCodeSVG
+                    id={qrElementId}
+                    value={joinUrl}
+                    size={208}
+                    level="H"
+                    fgColor="#0a0a0a"
+                    bgColor="transparent"
+                    includeMargin={false}
+                    style={{ width: '100%', height: '100%', borderRadius: '50%' }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-center text-sm text-gray-500 px-4">
+                    Generating secure link…
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        <p className="text-xs text-gray-400 text-center break-all">
-          {joinUrl}
+        <p className="text-xs text-gray-400 text-center break-all" aria-live="polite">
+          {shareReady ? joinUrl : 'Generating link...'}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2 w-full">
           <button
             onClick={handleCopy}
-            className="flex-1 rounded-lg border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold text-white hover:bg-white/15 transition"
+            disabled={!shareReady}
+            className={`
+              flex-1 rounded-lg border border-white/10 px-4 py-3 text-sm font-semibold text-white
+              ${shareReady ? 'bg-white/10 hover:bg-white/15' : 'bg-white/5 cursor-not-allowed opacity-60'}
+              transition
+            `}
           >
             {copied ? '✓ Link Copied' : '📋 Copy Link'}
           </button>
           <button
             onClick={handleDownload}
-            className="flex-1 btn-casino text-sm py-3 flex items-center justify-center gap-2"
+            disabled={!shareReady}
+            className={`
+              flex-1 btn-casino text-sm py-3 flex items-center justify-center gap-2
+              ${shareReady ? '' : 'opacity-60 cursor-not-allowed'}
+            `}
           >
             ⬇️ Download QR
           </button>
         </div>
+        {!hasConfiguredBase && (
+          <p className="text-[11px] leading-relaxed text-casino-gold/80 text-center">
+            Tip: set the <strong>Participant Join URL</strong> when creating the session (or configure <code>NEXT_PUBLIC_PARTICIPANT_BASE_URL</code>) so every QR code points to your public site instead of this device.
+          </p>
+        )}
       </div>
     </div>
   );

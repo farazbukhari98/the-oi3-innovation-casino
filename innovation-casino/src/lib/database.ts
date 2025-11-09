@@ -89,12 +89,29 @@ export type SessionSettingsOverride = Partial<Omit<Session['settings'], 'layerDu
   layerDurations?: Partial<Session['settings']['layerDurations']>;
 };
 
+function sanitizeBaseUrl(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+}
+
+function deriveParticipantBaseUrl(base?: string): string {
+  return (
+    sanitizeBaseUrl(base) ??
+    sanitizeBaseUrl(process.env.NEXT_PUBLIC_PARTICIPANT_BASE_URL) ??
+    sanitizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ??
+    ''
+  );
+}
+
 function ensureSessionSettings(settings?: SessionSettingsOverride): Session['settings'] {
   return {
     votingDuration: settings?.votingDuration ?? DEFAULT_LAYER_DURATIONS.layer1,
     requireDepartment: settings?.requireDepartment ?? true,
     allowRevotes: settings?.allowRevotes ?? false,
     chipsPerType: settings?.chipsPerType ?? DEFAULT_CHIPS_PER_TYPE,
+    participantBaseUrl: deriveParticipantBaseUrl(settings?.participantBaseUrl),
     layerDurations: {
       layer1: settings?.layerDurations?.layer1 ?? DEFAULT_LAYER_DURATIONS.layer1,
       layer2: settings?.layerDurations?.layer2 ?? DEFAULT_LAYER_DURATIONS.layer2,

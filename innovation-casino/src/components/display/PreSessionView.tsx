@@ -4,13 +4,27 @@ import { Session } from '@/types/session';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { ParticipantCounter } from './ParticipantCounter';
+import { useMemo } from 'react';
+import { getSessionQRUrl } from '@/lib/utils';
 
 interface PreSessionViewProps {
   session: Session;
 }
 
 export function PreSessionView({ session }: PreSessionViewProps) {
-  const joinUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/join?session=${session.id}`;
+  const configuredBase =
+    session.settings.participantBaseUrl?.trim() ||
+    process.env.NEXT_PUBLIC_PARTICIPANT_BASE_URL?.trim();
+  const runtimeOrigin = typeof window !== 'undefined' ? window.location.origin : undefined;
+  const joinUrl = useMemo(
+    () =>
+      getSessionQRUrl(session.id, {
+        baseUrl: session.settings.participantBaseUrl,
+        fallbackOrigin: runtimeOrigin,
+      }),
+    [session.id, session.settings.participantBaseUrl, runtimeOrigin]
+  );
+  const shareReady = Boolean(configuredBase) || Boolean(runtimeOrigin);
   const scenarioCards = session.scenarioOrder.map((scenarioId, index) => ({
     ...session.scenarios[scenarioId],
     id: scenarioId,
@@ -86,15 +100,21 @@ export function PreSessionView({ session }: PreSessionViewProps) {
 
             {/* QR Code */}
             <div className="absolute inset-[24px] flex items-center justify-center">
-              <QRCodeSVG
-                value={joinUrl}
-                size={256}
-                level="H"
-                fgColor="#0a0a0a"
-                bgColor="transparent"
-                includeMargin={false}
-                style={{ width: '100%', height: '100%', borderRadius: '50%' }}
-              />
+              {shareReady ? (
+                <QRCodeSVG
+                  value={joinUrl}
+                  size={256}
+                  level="H"
+                  fgColor="#0a0a0a"
+                  bgColor="transparent"
+                  includeMargin={false}
+                  style={{ width: '100%', height: '100%', borderRadius: '50%' }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-center text-display-sm text-gray-500 px-4 projector-text">
+                  Preparing session link…
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -139,7 +159,7 @@ export function PreSessionView({ session }: PreSessionViewProps) {
         transition={{ delay: 1.1 }}
         className="text-display-lg text-casino-gold font-mono mb-8"
       >
-        {joinUrl}
+        {shareReady ? joinUrl : 'Generating link...'}
       </motion.p>
 
       {/* Participant Counter */}

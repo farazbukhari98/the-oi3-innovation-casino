@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSession, getSession } from '@/lib/database';
 import type { SessionSettingsOverride } from '@/lib/database';
-import { getErrorMessage } from '@/lib/utils';
+import { getErrorMessage, getSessionQRUrl } from '@/lib/utils';
 
 interface CreateSessionRequestBody {
   facilitatorId?: string;
@@ -13,6 +13,7 @@ interface CreateSessionRequestBody {
     };
     requireDepartment?: boolean;
     allowRevotes?: boolean;
+    participantBaseUrl?: string;
   };
 }
 
@@ -55,11 +56,20 @@ export async function POST(request: NextRequest) {
       if (typeof settings.allowRevotes === 'boolean') {
         sanitizedSettings.allowRevotes = settings.allowRevotes;
       }
+
+      if (typeof settings.participantBaseUrl === 'string') {
+        const trimmed = settings.participantBaseUrl.trim();
+        if (trimmed.length > 0) {
+          sanitizedSettings.participantBaseUrl = trimmed;
+        }
+      }
     }
 
     const sessionId = await createSession(facilitatorId, sanitizedSettings);
-    const qrCodeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/join?session=${sessionId}`;
     const session = await getSession(sessionId);
+    const qrCodeUrl = getSessionQRUrl(sessionId, {
+      baseUrl: session?.settings.participantBaseUrl,
+    });
 
     return NextResponse.json({
       success: true,

@@ -189,12 +189,48 @@ export function isBrowser(): boolean {
   return typeof window !== 'undefined';
 }
 
+type ParticipantBaseUrlOptions = {
+  baseUrl?: string;
+  fallbackOrigin?: string;
+};
+
+const LOCAL_FALLBACK_URL = 'http://localhost:3000';
+
+function sanitizeBaseUrl(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+}
+
+export function resolveParticipantBaseUrl(options?: ParticipantBaseUrlOptions): string {
+  const runtimeOrigin =
+    options?.fallbackOrigin ??
+    (isBrowser() ? window.location.origin : undefined);
+
+  const order = [
+    options?.baseUrl,
+    process.env.NEXT_PUBLIC_PARTICIPANT_BASE_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    runtimeOrigin,
+  ];
+
+  for (const candidate of order) {
+    const sanitized = sanitizeBaseUrl(candidate);
+    if (sanitized) {
+      return sanitized;
+    }
+  }
+
+  return LOCAL_FALLBACK_URL;
+}
+
 /**
  * Generate QR code URL for session
  */
-export function getSessionQRUrl(sessionId: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  return `${baseUrl}/join?session=${sessionId}`;
+export function getSessionQRUrl(sessionId: string, options?: ParticipantBaseUrlOptions): string {
+  const base = resolveParticipantBaseUrl(options);
+  return `${base}/join?session=${sessionId}`;
 }
 
 /**

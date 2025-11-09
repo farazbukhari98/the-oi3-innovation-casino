@@ -14,6 +14,7 @@ import {
   DEFAULT_LAYER_DURATIONS,
   PAIN_POINT_DEFINITIONS,
 } from '@/lib/constants';
+import { resolveParticipantBaseUrl } from '@/lib/utils';
 
 type LegacySession = Session & {
   currentScenario?: ScenarioState;
@@ -70,6 +71,9 @@ function normalizeSessionData(rawSession: LegacySession): Session {
   const layer2Allocations = rawSession.metadata?.layer2Allocations ?? 0;
   const totalAllocations =
     rawSession.metadata?.totalAllocations ?? layer1Allocations + layer2Allocations;
+  const participantBaseUrl = resolveParticipantBaseUrl({
+    baseUrl: rawSession.settings?.participantBaseUrl,
+  });
 
   return {
     ...rawSession,
@@ -81,6 +85,7 @@ function normalizeSessionData(rawSession: LegacySession): Session {
       requireDepartment: rawSession.settings?.requireDepartment ?? true,
       allowRevotes: rawSession.settings?.allowRevotes ?? false,
       chipsPerType,
+      participantBaseUrl,
       layerDurations: {
         layer1: layer1Duration,
         layer2: layer2Duration,

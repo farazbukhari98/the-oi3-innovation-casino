@@ -230,7 +230,19 @@ export function resolveParticipantBaseUrl(options?: ParticipantBaseUrlOptions): 
  */
 export function getSessionQRUrl(sessionId: string, options?: ParticipantBaseUrlOptions): string {
   const base = resolveParticipantBaseUrl(options);
-  return `${base}/join?session=${sessionId}`;
+  // Ensure sessionId is properly URL encoded
+  const encodedSessionId = encodeURIComponent(sessionId);
+  const url = `${base}/join?session=${encodedSessionId}`;
+
+  // Log for debugging
+  if (isBrowser()) {
+    console.log('[getSessionQRUrl] Generated URL:', url);
+    console.log('[getSessionQRUrl] Base URL:', base);
+    console.log('[getSessionQRUrl] Session ID (raw):', sessionId);
+    console.log('[getSessionQRUrl] Session ID (encoded):', encodedSessionId);
+  }
+
+  return url;
 }
 
 /**

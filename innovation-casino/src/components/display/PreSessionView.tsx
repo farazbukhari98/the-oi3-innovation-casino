@@ -99,16 +99,13 @@ export function PreSessionView({ session }: PreSessionViewProps) {
             <div className="absolute inset-[12px] rounded-full border-[3px] border-black/10" />
 
             {/* QR Code */}
-            <div className="absolute inset-[24px] flex items-center justify-center">
+            <div className="absolute inset-[24px] flex items-center justify-center bg-white rounded-full">
               {shareReady ? (
                 <QRCodeSVG
                   value={joinUrl}
                   size={256}
-                  level="H"
-                  fgColor="#0a0a0a"
-                  bgColor="transparent"
-                  includeMargin={false}
-                  style={{ width: '100%', height: '100%', borderRadius: '50%' }}
+                  level="L"
+                  includeMargin={true}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-center text-display-sm text-gray-500 px-4 projector-text">

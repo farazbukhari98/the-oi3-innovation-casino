@@ -1,0 +1,23 @@
+<svg width="72" height="96" viewBox="0 0 72 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">Diamond Suit</title>
+  <defs>
+    <linearGradient id="diamondGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff7a6f"/>
+      <stop offset="45%" stop-color="#ee1f11"/>
+      <stop offset="100%" stop-color="#9a1209"/>
+    </linearGradient>
+    <linearGradient id="diamondHighlight" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.9)"/>
+      <stop offset="40%" stop-color="rgba(255,255,255,0.0)"/>
+    </linearGradient>
+  </defs>
+  <g filter="url(#diamondShadow)">
+    <path d="M36 0L72 48L36 96L0 48Z" fill="url(#diamondGradient)"/>
+    <path d="M36 5L67 48L36 91L5 48Z" fill="url(#diamondHighlight)" opacity="0.4"/>
+  </g>
+  <defs>
+    <filter id="diamondShadow" x="-12" y="-12" width="96" height="120" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="rgba(0,0,0,0.35)"/>
+    </filter>
+  </defs>
+</svg>

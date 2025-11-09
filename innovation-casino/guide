@@ -1,0 +1,131 @@
+Innovation Casino Run-of-Show Guide
+==================================
+
+Purpose
+-------
+This document explains how the Innovation Casino application operates from end to end. It walks through the technology stack, data flow, and every action expected from the facilitator, the 150 participants, and the small support crew that keeps the experience running smoothly.
+
+System at a Glance
+------------------
+- Web platform built with Next.js 16 App Router (`src/app`) and Tailwind 4 styling (`src/styles`).
+- Firebase Realtime Database stores sessions, participants, votes, and computed results (`src/lib/database.ts`).
+- Socket.io server (`server/socket-server.js`) pushes stage changes and vote counters to all connected clients in real time.
+- Three primary web surfaces:
+  1. Landing page (`/`) – explains roles and links to the control hub and projector display.
+2. Facilitator control hub (`/control`) – creates sessions, opens/closes betting, tracks attendance, exports data.
+  3. Projector display (`/display`) – mirrored on the big screen, reacts instantly to facilitator commands.
+- Participant phones cycle through `/join`, `/register`, and `/vote` depending on session state.
+
+Core Data Model
+---------------
+Firebase keeps the single source of truth:
+- `sessions/{sessionId}` – created by the facilitator. Tracks status through the full arc (`waiting` → `betting_layer1` → `results_layer1` → `routing` → `betting_layer2` → `results_layer2` → `insights` → `closed`) and stores both the fixed pain-point slate and the 4×4 solution matrix (`solutionsByPainPoint`). Metadata now includes `layer1Allocations`, `layer2Allocations`, `totalAllocations`, and the chip/timer configuration used for each layer.
+- `participants/{participantId}` – created during registration. Records name, department, device fingerprint, and the routing state: `layer1Completed`, `layer1Selection`, `layer2Completed`, plus timestamps so reconnecting devices resume in the correct layer instantly.
+- `votes/{voteId}` – created when a participant locks in their allocation. Each vote stores the target `layer`, optional `painPointId` (for layer 2), and a `scenarioId -> { time, talent, trust }` map totaling 12 chips (4 per type) per layer.
+- `results/{sessionId}` – cached output of `/api/vote/results`, now containing a `summary` object plus `layer1` and `layer2` aggregates so exports and displays can pivot between high-level priorities and solution-level bets.
+
+Real-Time Mechanics
+-------------------
+- `useSession` (`src/hooks/useSession.ts`) subscribes to `sessions/{sessionId}` over Firebase. Any change to the database replicates to facilitator, display, and participant devices within milliseconds.
+- `useRealtime` (`src/hooks/useRealtime.ts`) wires Socket.io events so that control actions (opening betting, showing results, counting participants) broadcast immediately.
+- The projector display (`/display`) renders one of four views (`PreSessionView`, `LiveVotingView`, `ResultsView`, `ThankYouView`) depending on the session status.
+
+Metaphor Mapping: Scenarios & Chips
+-----------------------------------
+- **Scenario slate (Layer 1)** – The four pain points are now hard-coded and represent the organizational problems the workshop explores. See `PAIN_POINT_DEFINITIONS` in `src/lib/constants.ts` for the canonical titles/descriptions surfaced on `/display`.
+- **Solution matrix (Layer 2)** – Each pain point has four pre-authored solution bets (`solutionsByPainPoint`). Routing logic sends every participant to the solution set that matches where they invested the most chips (ties are resolved randomly for fairness).
+- **Chips (3)** – defined as `time`, `talent`, and `trust` in `ScenarioAllocations` (`src/types/vote.ts`):
+  - `Time`: reveals whether the room believes there is enough calendar runway to pursue the scenario.
+  - `Talent`: highlights confidence in having the skills, teams, and capacity to execute.
+  - `Trust`: measures stakeholder conviction, sponsorship, and political capital.
+  Participants now receive 12 chips per layer (4 of each type). They must spend the full allotment every round, forcing a balanced discussion about capacity rather than just enthusiasm.
+
+Scenario Variations
+-------------------
+Swap or extend the default scenario lineup in `DEFAULT_SCENARIOS` or the `/control` creation form to keep sessions relevant. Example prompts:
+- **AI Support Agent Rollout** – Automate Tier 1 support to free human agents.
+- **Branchless Banking Launch** – Open accounts through a mobile-only journey with no paper trail.
+- **Carbon-Negative Packaging Revamp** – Redesign packaging to beat ESG targets by 2026.
+- **Field Technician Holo-Assist** – Equip maintenance crews with AR headsets streaming HQ expertise.
+- **Zero-Touch Expense Processing** – Machine learning clears compliant expenses instantly and escalates exceptions.
+
+Single-Round Flow
+-----------------
+- The facilitator seeds four scenarios before the session starts. They stay visible for the entire investment round instead of rotating through phases.
+- Control hub statuses are simple: **Open Betting** (participants allocate chips), **Show Final Results** (freeze submissions and render the composite stack), and **End Session** (project a thank-you screen).
+- Each participant receives 30 chips (10 per resource type) and must distribute them across the four scenarios. Backend validation enforces that every chip is spent before submission.
+- `votes/{voteId}` stores the entire portfolio, so aggregations are straightforward—no more per-phase duplication or comparison math.
+- `/display` animates live stacks during betting (chips fly into the relevant scenario columns) and then transitions to a final reveal that shows total chips plus the Time/Talent/Trust percentages for each initiative.
+
+Mobile Optimization Notes
+-------------------------
+- Participant routes (`/join`, `/register`, `/vote`) use Tailwind’s responsive utilities and card layouts that collapse cleanly on narrow screens.
+- Interactive elements (chip inventory cards, +/- allocation controls, confirmation modals) were designed with mobile tap targets, reduced text density, and vertical stacking (`mobile-stack` utility classes).
+- Framer Motion animations remain lightweight, and Firebase/Socket calls are minimal, keeping load times fast on iOS Safari and Android Chrome.
+- Dry runs confirm the QR → browser → voting flow works on common devices; keep validating on niche handsets during rehearsals.
+
+Pre-Session Checklist (Support Crew)
+------------------------------------
+1. Confirm environment variables (`.env.local`) contain Firebase credentials and `NEXT_PUBLIC_SOCKET_URL` pointing to the Socket.io server.
+2. Run `npm install` once, then start the hybrid server with `npm run dev`. This boots Next.js and the Socket.io layer together.
+3. Use two browsers or devices for rehearsal:
+   - Desktop A drives the facilitator console.
+   - Desktop B (projector machine) opens `/display` and is mirrored to the room.
+   - A mobile phone or emulator joins as a participant to test registration and voting.
+
+Facilitator Flow (Pit Boss Role)
+--------------------------------
+1. **Create the session**: open `/control` and press “Deal a New Session”. The POST to `/api/session/create` seeds Firebase with default scenario data and returns the `sessionId` plus QR link.
+2. **Stage the room**:
+   - Share the QR code on the projector using `/display?session={id}` while the display is in `waiting` status.
+   - Encourage attendees to scan the code; live counts update via `ParticipantList` and the projector `ParticipantCounter`.
+3. **Open the floor for betting**:
+   - Tap “Open Betting” in Session Controls. Status flips to `betting`, unlocking the `/vote` interface for every registered participant.
+   - Participants immediately see all four scenarios and distribute their 30 chips however they like. Every submission writes a single allocation object (`scenarioId -> time/talent/trust`) and increments the allocation counter.
+   - Watch chip totals climb in the control dashboard and on the projector’s live column animation.
+4. **Monitor live action**:
+   - Keep an eye on the timer and total allocations. Encourage stragglers by calling out remaining chips or spotlighting interesting scenario surges.
+5. **Reveal the final portfolio**:
+   - Hit “Show Final Results”. `/display` fetches `/api/vote/results`, caches the aggregate in `results/{sessionId}`, and renders each scenario’s total chips plus the resource mix percentages.
+6. **Close the experience**:
+   - Select “End Session”. The display swaps to the animated Thank You screen summarising attendance and total chips invested.
+7. **Export data** (optional but recommended):
+   - Click “Export Session CSV”. The control panel fetches the session metadata and the aggregated results payload, then downloads a timestamped CSV for documentation.
+
+Participant Journey (150 Players)
+---------------------------------
+1. **Join**: scan the QR or visit `/join?session={id}`. `useSession` validates the ID; if the session is live the player sees the scenario summary and attendance growth.
+2. **Register**: continue to `/register`. The form requires a name and department. Submitting calls `/api/participant/register`, which stores the participant and soft fingerprints the device (UUID in localStorage) to prevent duplicate signups.
+3. **Wait state**: if the facilitator has not opened betting (`status = waiting`), the `/vote` page displays a holding card instructing them to watch the big screen.
+4. **Allocate chips**:
+   - Once `status = betting`, the chip inventory cards unlock. Participants see all four scenarios simultaneously and use +/- controls to assign Time, Talent, and Trust chips until every counter hits zero.
+   - Choosing “Lock In Your Bets” opens a confirmation modal that summarizes their distribution. Submission persists the allocations, flashes the “Bet Placed!” success animation, and prevents duplicate entries (the server checks `hasSubmittedAllocation`).
+5. **Observe the reveal**: after submitting, the `/vote` screen thanks them and encourages watching the live board. If the facilitator switches to results/closed, the view stays in its acknowledgement state.
+
+Projector Display Operator (if separate from facilitator)
+--------------------------------------------------------
+1. Open `/display?session={id}` on the presentation machine. Keep the browser window full-screen and mirrored to the venue screen.
+2. Verify the view tracks the facilitator’s actions (waiting screen → live betting animations → final portfolio reveal → thank-you finale).
+3. If desynchronised, refresh the page to re-subscribe to Firebase and Socket.io.
+
+Behind-the-Scenes Automation
+----------------------------
+- Session creation seeds the default four-scenario lineup defined in `src/lib/constants.ts`. Custom combinations can be injected by extending `createSession` or enhancing the control UI.
+- Metadata counters (`metadata.totalParticipants`, `metadata.totalAllocations`) update atomically to keep dashboard statistics accurate.
+- The `/api/vote/results` endpoint caches the aggregate scenario totals so the live reveal, control export, and projector take the same snapshot.
+- Socket.io namespaces rooms as `session-{id}` to ensure broadcasts stay scoped to the current event.
+
+Common Recovery Plays
+---------------------
+- **Participant reports “Session not found”**: confirm they scanned the correct code and that the facilitator has not ended the session. If still failing, regenerate the QR by refreshing the control page and reloading `/display`.
+- **Vote submission error**: usually caused by duplicate submissions or loss of connectivity. Ask the participant to refresh `/vote`; the hook rehydrates their name and flags whether the vote already posted.
+- **Display lags behind**: refresh the projector browser. The app re-subscribes to Firebase snapshots and resumes live updates.
+- **Firebase outage**: pause the experience, stop the server, restart once connectivity returns. No durable state is lost—Realtime Database retains prior votes and the display rehydrates from stored results.
+
+Wrap-Up Responsibilities
+------------------------
+- Facilitator downloads and shares the CSV export for documentation or post-event analysis.
+- Support crew powers down the projector display and confirms no lingering sessions remain open in Firebase (optional cleanup step).
+- Technical lead notes any issues for future improvements (e.g., scenario variations, analytics integrations).
+
+Use this guide as the runbook to rehearse, deliver, and debrief every Innovation Casino session with confidence.

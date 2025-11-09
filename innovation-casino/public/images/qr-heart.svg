@@ -1,0 +1,16 @@
+<svg width="80" height="72" viewBox="0 0 80 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">Heart Suit</title>
+  <defs>
+    <linearGradient id="heartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff8d8a"/>
+      <stop offset="40%" stop-color="#ff2b2d"/>
+      <stop offset="100%" stop-color="#a30f12"/>
+    </linearGradient>
+    <radialGradient id="heartHighlight" cx="35%" cy="25%" r="60%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.9)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+  </defs>
+  <path d="M40 70.5C40 70.5 6 48 6 24C6 10.745 16.745 0 30 0C36.744 0 43.013 3.052 47 7.964C50.987 3.052 57.256 0 64 0C77.255 0 88 10.745 88 24C88 48 40 70.5 40 70.5Z" transform="translate(-8 2)" fill="url(#heartGradient)"/>
+  <path d="M32 14C27 14 22 18 22 24C22 31 32 40 40 46C48 40 58 31 58 24C58 18 53 14 48 14C44 14 41 16 40 18C39 16 36 14 32 14Z" fill="url(#heartHighlight)" opacity="0.6"/>
+</svg>

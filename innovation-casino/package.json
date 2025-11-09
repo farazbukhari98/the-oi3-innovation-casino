@@ -1,0 +1,43 @@
+{
+  "name": "innovation-casino",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node server/socket-server.js",
+    "dev:next": "next dev",
+    "build": "next build",
+    "start": "NODE_ENV=production node server/socket-server.js",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "build:test": "rm -rf .tests-dist && tsc -p tsconfig.tests.json",
+    "test": "npm run build:test && node --test tests/unit && npm run typecheck"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "date-fns": "^4.1.0",
+    "firebase": "^12.4.0",
+    "framer-motion": "^12.23.24",
+    "next": "16.0.0",
+    "qrcode.react": "^4.2.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-hook-form": "^7.65.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "uuid": "^13.0.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/uuid": "^11.0.0",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^2.1.2"
+  }
+}

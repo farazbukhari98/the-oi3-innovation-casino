@@ -1,0 +1,14 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Casino Chip Icon</title>
+  <desc id="desc">A golden casino chip with dark accents.</desc>
+  <defs>
+    <linearGradient id="chipGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE066"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="72" fill="url(#chipGradient)" stroke="#1a1a1a" stroke-width="6"/>
+  <circle cx="80" cy="80" r="48" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-dasharray="18 12"/>
+  <circle cx="80" cy="80" r="28" fill="#1a1a1a"/>
+  <text x="80" y="92" text-anchor="middle" font-size="40" font-family="Playfair Display, serif" fill="#FFD700">IC</text>
+</svg>

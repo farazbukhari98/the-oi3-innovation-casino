@@ -1,0 +1,71 @@
+/* Prevent pull-to-refresh on touch devices */
+body {
+  overscroll-behavior-y: contain;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ensure interactive elements meet minimum touch target sizes */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 12px;
+}
+
+/* Prevent iOS Safari from zooming inputs on focus */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
+
+/* Fine-tune casino visuals for touch devices */
+@media (max-width: 768px) {
+  body::before {
+    background-size: 90px 90px;
+    opacity: 0.35;
+  }
+
+  body::after {
+    opacity: 0.4;
+  }
+
+  .casino-card {
+    padding: 1.35rem;
+    border-radius: 0.85rem;
+  }
+
+  .btn-casino {
+    width: 100%;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+
+  .projector-text {
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.55);
+  }
+
+  .floating-chip-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 15px;
+  }
+
+  .casino-card {
+    padding: 1.1rem;
+  }
+
+  .btn-casino {
+    padding: 0.75rem 1rem;
+  }
+
+  .mobile-stack {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}

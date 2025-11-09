@@ -1,0 +1,34 @@
+{
+  "rules": {
+    "sessions": {
+      ".read": true,
+      "$sessionId": {
+        ".write": true
+      }
+    },
+    "participants": {
+      ".read": true,
+      ".indexOn": ["deviceId", "sessionId"],
+      "$participantId": {
+        ".write": true
+      }
+    },
+    "votes": {
+      ".read": true,
+      ".indexOn": ["sessionId", "participantId", "phase"],
+      "$voteId": {
+        ".write": true
+      }
+    },
+    "results": {
+      ".read": true,
+      "$sessionId": {
+        ".write": true
+      }
+    },
+    "test": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

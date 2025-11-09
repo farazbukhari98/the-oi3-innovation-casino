@@ -1,0 +1,16 @@
+<svg width="80" height="72" viewBox="0 0 80 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">Club Suit</title>
+  <defs>
+    <radialGradient id="clubGradient" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#4c4f5d"/>
+      <stop offset="40%" stop-color="#1f2129"/>
+      <stop offset="100%" stop-color="#0a0b11"/>
+    </radialGradient>
+    <linearGradient id="clubHighlight" x1="30%" y1="10%" x2="70%" y2="80%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.45)"/>
+      <stop offset="50%" stop-color="rgba(255,255,255,0)"/>
+    </linearGradient>
+  </defs>
+  <path d="M40 23C40 10.297 50.297 0 63 0C75.703 0 86 10.297 86 23C86 32.697 79.469 40.88 70.66 44.045C73.592 46.948 75.5 50.992 75.5 55.5C75.5 64.613 68.113 72 59 72C53.278 72 48.118 69.068 45 64.508V64.5H35V64.508C31.882 69.068 26.722 72 21 72C11.887 72 4.5 64.613 4.5 55.5C4.5 50.992 6.408 46.948 9.34 44.045C0.531 40.88 -6 32.697 -6 23C-6 10.297 4.297 0 17 0C29.703 0 40 10.297 40 23Z" transform="translate(-6)" fill="url(#clubGradient)"/>
+  <ellipse cx="31" cy="25" rx="12" ry="16" fill="url(#clubHighlight)" opacity="0.35"/>
+</svg>

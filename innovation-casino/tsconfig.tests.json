@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".tests-dist",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "es2020",
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "src/lib/utils.ts",
+    "src/lib/gameLogic.ts",
+    "src/types/**/*.ts"
+  ]
+}

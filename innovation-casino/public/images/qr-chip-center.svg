@@ -1,0 +1,22 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Casino Chip Centerpiece</title>
+  <desc id="desc">Golden casino chip with Innovation Casino initials.</desc>
+  <defs>
+    <radialGradient id="chipGlow" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#fff4c5"/>
+      <stop offset="45%" stop-color="#ffd860"/>
+      <stop offset="100%" stop-color="#c7981d"/>
+    </radialGradient>
+    <linearGradient id="chipEdge" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe496"/>
+      <stop offset="45%" stop-color="#f3c23c"/>
+      <stop offset="100%" stop-color="#a6741b"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="56" fill="url(#chipGlow)" stroke="#5b4312" stroke-width="6"/>
+  <circle cx="60" cy="60" r="40" fill="none" stroke="url(#chipEdge)" stroke-width="10" stroke-dasharray="10 20" stroke-linecap="round"/>
+  <circle cx="60" cy="60" r="30" fill="#101010" stroke="#f7d05d" stroke-width="4"/>
+  <text x="60" y="70" text-anchor="middle" font-family="Playfair Display, serif" font-size="30" font-weight="600" fill="#f8d46f">
+    IC
+  </text>
+</svg>

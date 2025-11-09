@@ -1,0 +1,118 @@
+Multi-Scenario Session Roadmap
+==============================
+
+Objective
+---------
+Enable a single Innovation Casino session to run multiple scenarios sequentially (scenario A → B → ...), while preserving the existing two-phase flow, real-time displays, participant experience, data exports, and casino-night narrative.
+
+Assumptions & Open Questions
+----------------------------
+- Each scenario must complete the full cycle (waiting → phase1 → phase1_results → phase2 → phase2_results → comparison) before the facilitator advances.
+- Facilitator specifies the number of scenarios and their descriptions during session creation or immediately afterward.
+- Participants stay authenticated once and progress automatically as new scenarios unlock; no re-registration required.
+- Backward compatibility is desired: existing single-scenario data should continue to load without errors.
+- Need confirmation on whether vote timers reset per scenario and whether the QR code remains constant (assumed yes).
+
+Phase 1 – Technical Design & Data Modeling
+------------------------------------------
+1. **Session schema extension**
+   - Update `Session` type to hold:
+     - `scenarios`: ordered array of scenario objects (`{ id, title, description }`).
+     - `activeScenarioIndex`: zero-based pointer to the current scenario.
+     - `scenarioStatuses`: map keyed by scenario id capturing `status`, `currentPhase`, metadata counters, cached results references.
+   - Decide whether to keep a top-level `currentScenario` for backward compatibility or infer from the index.
+2. **Database layout**
+   - Design Firebase structure for scenario-scoped metadata:
+     - `sessions/{sessionId}/scenarios/{scenarioId}` for scenario-specific settings and metadata.
+     - `participants` remains keyed by session (participants span all scenarios).
+     - `votes/{sessionId}/{scenarioId}/{voteId}` or embed `scenarioId` attribute for filtering.
+     - `results/{sessionId}/{scenarioId}/phase{N}` and `/comparison`.
+   - Draft migration plan for existing sessions (possibly on read-transform if `scenarios` absent).
+3. **API contract updates**
+   - `/api/session/create`: accept scenarios payload or count + details; generate scenario ids and default statuses.
+   - New endpoints or extend `/api/session/update` to:
+     - Advance scenario phases.
+     - Move `activeScenarioIndex` to the next scenario when the facilitator confirms.
+   - Optional: `/api/session/scenario/update` to edit descriptions mid-session.
+4. **Socket event payloads**
+   - Include `scenarioId` or active index in `session_updated`, `new_vote`, `participant_joined` emissions.
+   - Confirm clients subscribe per session (likely no change) but update handlers to respect active scenario.
+
+Phase 2 – Client State & Hooks
+------------------------------
+5. **`useSession` hook**
+   - Adjust snapshot parsing to hydrate multi-scenario data.
+   - Provide derived helpers: `currentScenario`, `currentScenarioMetadata`, `isLastScenario`, `nextScenarioId`.
+   - Maintain backward compatibility when `scenarios` absent.
+6. **`useRealtime` hook & socket helpers**
+   - Ensure event callbacks include scenario context; update TypeScript types.
+   - Handle scenario advancement broadcast so projector and participants react simultaneously.
+7. **Context providers**
+   - Update `SessionContext` methods: `updateStatus`, `updatePhase`, `advanceScenario` (new).
+   - Decide whether `ParticipantContext` needs scenario awareness (e.g., to check per-scenario vote completion).
+
+Phase 3 – Facilitator Experience
+--------------------------------
+8. **Session creation wizard**
+   - Add UI for entering number of scenarios + titles/descriptions before starting gameplay.
+   - Validate entries; optionally provide templates/examples.
+   - Persist via updated `createSession` call and show confirmation screen with scenario list.
+9. **Control panel enhancements**
+   - Session overview: display multi-scenario progress (e.g., chips for Scenario 1/2/3).
+   - Session controls: scope buttons to active scenario; disable until prerequisites met.
+   - Add “Advance to Next Scenario” action once comparison is complete; confirmation modal summarizing results.
+   - Provide quick-edit ability for scenario descriptions if needed.
+10. **QR & display link**
+    - Confirm same QR works; ensure `/display` uses active scenario for label and status.
+
+Phase 4 – Display & Participant Interfaces
+------------------------------------------
+11. **Projector views**
+    - Update props to consume `session.scenarios[activeScenarioIndex]`.
+    - Show scenario progress indicator (e.g., “Scenario 2 of 4”).
+    - Reset timers and vote counters when scenario changes.
+12. **Participant flow**
+    - On scenario advancement:
+      - `/vote` should detect new `activeScenarioIndex`, reset local chip placements, and display updated scenario info.
+      - Guard against duplicate votes by resetting statuses per scenario (require DB flags `hasVotedPhase1`, `hasVotedPhase2` keyed by participant + scenario).
+    - Provide subtle UI messaging that a new round has started.
+13. **Join/register pages**
+    - Reflect multi-scenario agenda (e.g., list upcoming scenario names) after registration to set expectations.
+
+Phase 5 – Data & Export Adjustments
+-----------------------------------
+14. **Vote storage & results calculation**
+    - Update `submitVote`, `hasParticipantVoted`, `calculateResults`, `calculateComparison` to handle `scenarioId`.
+    - Ensure metadata counters increment per scenario as well as per session totals.
+15. **CSV export**
+    - Expand `ExportButton` to iterate scenarios, outputting phase results and comparison for each.
+    - Include aggregate stats across all scenarios if needed.
+16. **Analytics & logging**
+    - Review logging statements to include scenario context for easier debugging.
+
+Phase 6 – Testing & QA
+----------------------
+17. **Unit & integration coverage**
+    - Add tests for new utilities (result calculations with scenario separation).
+    - Mock Firebase data to verify hooks handle both legacy and new session shapes.
+18. **Manual scripts**
+    - Draft rehearsal checklist: single scenario session, multi-scenario session (2+ scenarios), mid-session scenario edits.
+    - Verify participant devices stay connected and clear state between scenarios.
+19. **Backward compatibility checks**
+    - Load existing data snapshots; ensure UI defaults to single-scenario mode without errors.
+    - Confirm exports still work for legacy sessions.
+
+Phase 7 – Deployment & Rollout
+------------------------------
+20. **Feature flag (optional)**
+    - Wrap multi-scenario support behind a toggle to allow staged rollout.
+21. **Migration strategy**
+    - Decide whether to backfill old sessions with a synthetic single-item `scenarios` array or handle at runtime.
+22. **Documentation updates**
+    - Update `README`, `guide`, facilitator training materials, and onboarding scripts with multi-scenario instructions.
+23. **Post-launch monitoring**
+    - Track Firebase metrics for vote volume per scenario.
+    - Collect facilitator feedback after first live run and iterate.
+
+
+

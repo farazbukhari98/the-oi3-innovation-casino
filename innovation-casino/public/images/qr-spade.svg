@@ -1,0 +1,16 @@
+<svg width="82" height="80" viewBox="0 0 82 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">Spade Suit</title>
+  <defs>
+    <linearGradient id="spadeGradient" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#4b4f59"/>
+      <stop offset="40%" stop-color="#20222b"/>
+      <stop offset="100%" stop-color="#08090f"/>
+    </linearGradient>
+    <radialGradient id="spadeHighlight" cx="40%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.4)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+  </defs>
+  <path d="M41 0C55.683 18.345 82 32.067 82 52C82 63.046 73.046 72 62 72C55.994 72 50.543 69.394 46.764 65.196C47.491 68.009 48 71.116 48 74.5C48 76.985 45.985 79 43.5 79H38.5C36.015 79 34 76.985 34 74.5C34 71.116 34.509 68.009 35.236 65.196C31.457 69.394 26.006 72 20 72C8.954 72 0 63.046 0 52C0 32.067 26.317 18.345 41 0Z" fill="url(#spadeGradient)"/>
+  <path d="M41 9C51.5 23 72 33 72 49C72 57.837 64.837 65 56 65C49.86 65 44.551 61.31 41.5 55.994C39.138 61.271 33.62 65 27 65C18.163 65 11 57.837 11 49C11 33 30.5 23 41 9Z" fill="url(#spadeHighlight)" opacity="0.45"/>
+</svg>

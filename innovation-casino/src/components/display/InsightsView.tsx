@@ -1,6 +1,6 @@
 'use client';
 
-import { Session } from '@/types/session';
+import { Session, InnovationBoldness } from '@/types/session';
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -10,7 +10,7 @@ import {
   DepartmentInsights,
 } from '@/types/results';
 import { getErrorMessage } from '@/lib/utils';
-import { PAIN_POINT_DEFINITIONS } from '@/lib/constants';
+import { PAIN_POINT_DEFINITIONS, BOLDNESS_META } from '@/lib/constants';
 
 interface InsightHighlights {
   topPainPoint?: ScenarioResults;
@@ -18,6 +18,13 @@ interface InsightHighlights {
   topGroupResults?: LayerResults;
   topSolution?: ScenarioResults;
   departments?: DepartmentInsights;
+  boldnessSpread?: {
+    tier: InnovationBoldness;
+    label: string;
+    innovationLabel: string;
+    chips: number;
+    percentage: number;
+  }[];
 }
 
 export function InsightsView({ session }: { session: Session }) {
@@ -73,12 +80,37 @@ export function InsightsView({ session }: { session: Session }) {
       )[0];
     }
 
+    const boldnessAccumulator: Partial<Record<InnovationBoldness, number>> = {};
+    groupEntries.forEach(([, group]) => {
+      if (!group?.boldnessTotals) return;
+      Object.entries(group.boldnessTotals).forEach(([tier, totals]) => {
+        if (!totals) return;
+        const typedTier = tier as InnovationBoldness;
+        boldnessAccumulator[typedTier] =
+          (boldnessAccumulator[typedTier] || 0) + (totals.totals.totalChips ?? 0);
+      });
+    });
+    const totalBoldnessChips = Object.values(boldnessAccumulator).reduce((sum, value = 0) => sum + value, 0);
+    const boldnessSpread =
+      totalBoldnessChips > 0
+        ? (Object.entries(boldnessAccumulator) as [InnovationBoldness, number][])
+            .map(([tier, chips]) => ({
+              tier,
+              label: BOLDNESS_META[tier]?.shortLabel ?? tier,
+              innovationLabel: BOLDNESS_META[tier]?.innovationLabel ?? '',
+              chips,
+              percentage: Math.round((chips / totalBoldnessChips) * 1000) / 10,
+            }))
+            .sort((a, b) => b.chips - a.chips)
+        : undefined;
+
     return {
       topPainPoint,
       topGroupId: topGroupEntry?.[0],
       topGroupResults: topGroupEntry?.[1],
       topSolution,
       departments: results.departments,
+      boldnessSpread,
     };
   }, [results]);
 
@@ -111,6 +143,37 @@ export function InsightsView({ session }: { session: Session }) {
           </p>
         </div>
 
+        {highlights.boldnessSpread && (
+          <div className="rounded-3xl border border-white/10 bg-black/40 p-8 text-left space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-1">Boldness Mix</p>
+                <p className="text-2xl font-heading text-white">High Roller appetite by tier</p>
+              </div>
+              <p className="text-sm text-gray-400">Share of total High Roller chips</p>
+            </div>
+            <div className="space-y-4">
+              {highlights.boldnessSpread.map((tier) => (
+                <div key={tier.tier}>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-white font-semibold">{tier.label}</span>
+                    <span className="text-gray-300">{tier.percentage}%</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-casino-gold to-amber-500"
+                      style={{ width: `${tier.percentage}%` }}
+                    />
+                  </div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-400 mt-1">
+                    {tier.innovationLabel} · {tier.chips} chips
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
             <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Participants</p>
@@ -118,12 +181,12 @@ export function InsightsView({ session }: { session: Session }) {
             <p className="text-sm text-gray-400">Players contributing insights</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Layer 1 Chips</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Member Access Chips</p>
             <p className="text-5xl font-bold text-casino-gold">{summary.totalLayer1Chips}</p>
             <p className="text-sm text-gray-400">Across all pain points</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Layer 2 Chips</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">High Roller Chips</p>
             <p className="text-5xl font-bold text-casino-gold">{summary.totalLayer2Chips}</p>
             <p className="text-sm text-gray-400">Invested in solutions</p>
           </div>
@@ -137,7 +200,7 @@ export function InsightsView({ session }: { session: Session }) {
             </h3>
             <p className="text-sm text-gray-300">
               {highlights.topPainPoint?.description ??
-                'Final Layer 1 results will reveal the top priority.'}
+                'Final Member Access results will reveal the top priority.'}
             </p>
             <p className="text-4xl font-bold text-casino-gold">
               {highlights.topPainPoint?.totals.totalChips ?? 0} chips
@@ -151,7 +214,7 @@ export function InsightsView({ session }: { session: Session }) {
             </h3>
             <p className="text-sm text-gray-300">
               {topGroupDefinition?.description ??
-                'Layer 2 routing assignment will determine the top focus group.'}
+                'High Roller routing will determine the top focus group.'}
             </p>
             <div className="text-4xl font-bold text-casino-gold">
               {highlights.topGroupResults?.totalChips ?? 0} chips
@@ -176,7 +239,7 @@ export function InsightsView({ session }: { session: Session }) {
                   </p>
                 </>
               ) : (
-                <p className="text-gray-300">Layer 2 results will highlight the leading solutions.</p>
+                <p className="text-gray-300">High Roller results will highlight the leading solutions.</p>
               )}
             </div>
             <div>
@@ -206,7 +269,7 @@ export function InsightsView({ session }: { session: Session }) {
                 </div>
               ) : (
                 <p className="text-sm text-gray-400">
-                  Department-level insights will appear once Layer 1 completes.
+                  Department-level insights will appear once Member Access completes.
                 </p>
               )}
             </div>
@@ -218,13 +281,13 @@ export function InsightsView({ session }: { session: Session }) {
               {highlights.topPainPoint && (
                 <li>
                   <span className="text-white font-semibold">{highlights.topPainPoint.title}</span> drew the
-                  largest share of Layer 1 chips, signaling the organization&apos;s priority.
+                  largest share of Member Access chips, signaling the organization&apos;s priority.
                 </li>
               )}
               {topGroupDefinition && (
                 <li>
                   <span className="text-white font-semibold">{topGroupDefinition.title}</span> brought the largest table into
-                  Layer 2, with {highlights.topGroupResults?.totalAllocations ?? 0} bettors evaluating solutions.
+                  the High Roller Level, with {highlights.topGroupResults?.totalAllocations ?? 0} bettors evaluating solutions.
                 </li>
               )}
               {highlights.topSolution && (

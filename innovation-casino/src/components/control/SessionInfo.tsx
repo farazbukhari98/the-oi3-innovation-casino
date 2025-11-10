@@ -9,12 +9,12 @@ interface SessionInfoProps {
 const STATUS_MAP: Record<string, { label: string; className: string; icon: string }> = {
   waiting: { label: 'Waiting to Start', className: 'from-gray-500/70 to-slate-700/70', icon: '🕒' },
   betting: { label: 'Betting Live', className: 'from-emerald-500/70 to-emerald-700/70', icon: '🎲' },
-  betting_layer1: { label: 'Layer 1 Voting', className: 'from-emerald-500/70 to-emerald-700/70', icon: '🎲' },
-  results_layer1: { label: 'Layer 1 Results', className: 'from-cyan-500/70 to-blue-600/70', icon: '📊' },
-  routing: { label: 'Routing Participants', className: 'from-purple-500/70 to-indigo-700/70', icon: '🧭' },
-  betting_layer2: { label: 'Layer 2 Voting', className: 'from-pink-500/70 to-rose-700/70', icon: '🎰' },
-  results_layer2: { label: 'Layer 2 Results', className: 'from-blue-500/70 to-indigo-600/70', icon: '📊' },
-  insights: { label: 'Insights & Debrief', className: 'from-amber-500/70 to-orange-700/70', icon: '💡' },
+  betting_layer1: { label: 'Member Access Level', className: 'from-emerald-500/70 to-emerald-700/70', icon: '🎫' },
+  results_layer1: { label: 'Member Access Insights', className: 'from-cyan-500/70 to-blue-600/70', icon: '📊' },
+  routing: { label: 'Routing High Rollers', className: 'from-purple-500/70 to-indigo-700/70', icon: '🧭' },
+  betting_layer2: { label: 'High Roller Level', className: 'from-pink-500/70 to-rose-700/70', icon: '🎰' },
+  results_layer2: { label: 'High Roller Insights', className: 'from-blue-500/70 to-indigo-600/70', icon: '📈' },
+  insights: { label: 'Combined Insights', className: 'from-amber-500/70 to-orange-700/70', icon: '💡' },
   results: { label: 'Final Results', className: 'from-blue-500/70 to-indigo-600/70', icon: '📊' },
   closed: { label: 'Session Closed', className: 'from-red-500/70 to-rose-600/70', icon: '🔚' },
 };

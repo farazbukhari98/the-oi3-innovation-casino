@@ -259,7 +259,7 @@ function VotePageContent() {
           <div className="min-h-screen flex items-center justify-center px-4">
             <MessageCard
               icon="⏳"
-              title="Layer 1 closed"
+              title="Member Access closed"
               description={
                 <>
                   <p>The facilitator already locked the first round.</p>

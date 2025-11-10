@@ -108,7 +108,7 @@ export function LiveVotingLayer1View({ session }: LiveVotingLayer1ViewProps) {
           animate={{ opacity: 1, y: 0 }}
           className="text-display-3xl font-heading text-gold-gradient mb-2 projector-text"
         >
-          LAYER 1: PAIN POINTS
+          MEMBER ACCESS: FOCUS AREAS
         </motion.h1>
         <p className="text-display-xl text-gray-300 projector-text">
           Where should we focus our innovation efforts?

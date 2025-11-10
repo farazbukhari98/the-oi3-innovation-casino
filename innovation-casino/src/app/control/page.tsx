@@ -165,7 +165,7 @@ function ControlPanelContent() {
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-[0.28em] text-gray-400 mb-2">
-                    Layer 1 Timer (minutes)
+                    Member Access Timer (minutes)
                   </label>
                   <input
                     type="number"
@@ -177,7 +177,7 @@ function ControlPanelContent() {
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-[0.28em] text-gray-400 mb-2">
-                    Layer 2 Timer (minutes)
+                    High Roller Timer (minutes)
                   </label>
                   <input
                     type="number"

@@ -17,9 +17,13 @@ export interface Scenario {
   description: string;
 }
 
+export type InnovationBoldness = 'safe_bet' | 'wild_card' | 'moonshot' | 'jackpot';
+
 export interface SolutionScenario extends Scenario {
   painPointId: string;
   placeholder?: boolean;
+  boldness: InnovationBoldness;
+  innovationLabel: string;
 }
 
 export interface SessionSettings {

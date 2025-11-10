@@ -90,7 +90,7 @@ export function ResultsLayer2View({ session }: { session: Session }) {
           animate={{ opacity: 1, y: 0 }}
           className="text-4xl md:text-8xl font-heading text-gold-gradient projector-text"
         >
-          LAYER 2 RESULTS
+          HIGH ROLLER RESULTS
         </motion.h1>
         <p className="text-2xl md:text-4xl text-gray-300 projector-text">
           Solution bets by casino table
@@ -99,7 +99,7 @@ export function ResultsLayer2View({ session }: { session: Session }) {
 
       {!primaryGroup && (
         <p className="text-center text-gray-300 text-2xl">
-          Layer 2 voting results will appear here once participants lock in their solutions.
+          High Roller voting results will appear here once participants lock in their solutions.
         </p>
       )}
 
@@ -131,6 +131,11 @@ export function ResultsLayer2View({ session }: { session: Session }) {
                     <div>
                       <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Solution</p>
                       <h3 className="text-xl font-heading text-white line-clamp-1">{solution.title}</h3>
+                      {solution.innovationLabel && (
+                        <p className="text-[11px] uppercase tracking-[0.3em] text-casino-gold">
+                          {solution.innovationLabel}
+                        </p>
+                      )}
                       <p className="text-sm text-white/60 line-clamp-2">{solution.description}</p>
                     </div>
                     <div className="flex items-baseline justify-between">

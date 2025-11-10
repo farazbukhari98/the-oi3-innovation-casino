@@ -39,10 +39,10 @@ export function ParticipantList({ sessionId }: ParticipantListProps) {
 
   const getSubmissionStatus = (participant: Participant) => {
     if (participant.layer2Completed) {
-      return { label: 'Layer 2', className: 'bg-blue-500/20 text-blue-200 border-blue-500/40', icon: '✅' };
+      return { label: 'High Roller', className: 'bg-blue-500/20 text-blue-200 border-blue-500/40', icon: '✅' };
     }
     if (participant.layer1Completed) {
-      return { label: 'Layer 1', className: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40', icon: '✅' };
+      return { label: 'Member Access', className: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40', icon: '✅' };
     }
     return { label: 'Waiting', className: 'bg-white/10 text-gray-300 border-white/15', icon: '⏳' };
   };

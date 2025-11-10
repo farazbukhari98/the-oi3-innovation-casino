@@ -44,12 +44,12 @@ export function ExportButton({ sessionId }: ExportButtonProps) {
       const layer2 = results.layer2;
       const summary = results.summary;
 
-      csv += `Layer 1 Allocations:,${summary.layer1Allocations}\n`;
-      csv += `Layer 2 Allocations:,${summary.layer2Allocations}\n`;
-      csv += `Layer 1 Chips:,${layer1.totalChips}\n`;
-      csv += `Layer 2 Chips:,${summary.totalLayer2Chips}\n\n`;
+      csv += `Member Access Allocations:,${summary.layer1Allocations}\n`;
+      csv += `High Roller Allocations:,${summary.layer2Allocations}\n`;
+      csv += `Member Access Chips:,${layer1.totalChips}\n`;
+      csv += `High Roller Chips:,${summary.totalLayer2Chips}\n\n`;
 
-      csv += 'Layer 1 – Pain Point Investments\n';
+      csv += 'Member Access – Pain Point Investments\n';
       layer1.scenarios.forEach((scenario, index) => {
         csv += `Scenario ${index + 1},${escapeCsv(scenario.title)}\n`;
         csv += `Description,${escapeCsv(scenario.description)}\n`;
@@ -58,15 +58,25 @@ export function ExportButton({ sessionId }: ExportButtonProps) {
         csv += `Percentages,${scenario.percentages.time}%,${scenario.percentages.talent}%,${scenario.percentages.trust}%,100%\n\n`;
       });
 
-      csv += 'Layer 2 – Solution Investments by Pain Point\n';
+      csv += 'High Roller – Personalized Solution Investments\n';
       Object.entries(layer2).forEach(([painPointId, groupResults], index) => {
         const painPointTitle = session.scenarios[painPointId]?.title ?? `Pain Point ${index + 1}`;
         csv += `Pain Point,${escapeCsv(painPointTitle)}\n`;
         csv += `Allocations,${groupResults.totalAllocations}\n`;
         csv += `Total Chips,${groupResults.totalChips}\n`;
+        if (groupResults.boldnessTotals) {
+          csv += 'Boldness,Innovation Label,Total Chips,Share of Chips,Participants Touching\n';
+          Object.values(groupResults.boldnessTotals).forEach((tier) => {
+            csv += `${escapeCsv(tier.label)},${escapeCsv(tier.innovationLabel)},${tier.totals.totalChips},${tier.percentageOfLayer}%,${tier.allocationCount}\n`;
+          });
+          csv += '\n';
+        }
         groupResults.scenarios.forEach((scenario) => {
           csv += `Solution,${escapeCsv(scenario.title)}\n`;
           csv += `Description,${escapeCsv(scenario.description)}\n`;
+          if (scenario.boldness) {
+            csv += `Boldness,${escapeCsv(scenario.innovationLabel ?? scenario.boldness)}\n`;
+          }
           csv += 'Metric,Time,Talent,Trust,Total Chips\n';
           csv += `Chips,${scenario.totals.time},${scenario.totals.talent},${scenario.totals.trust},${scenario.totals.totalChips}\n`;
           const timePercent = scenario.percentages.time ?? 0;

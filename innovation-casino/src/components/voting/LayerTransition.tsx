@@ -72,8 +72,8 @@ export function LayerTransition({
           </h1>
           <p className="text-xl text-white/70">
             {stage === 'afterLayer1'
-              ? 'Your Layer 1 priorities are locked in'
-              : 'Your Layer 2 solutions are locked in'}
+              ? 'Your Member Access priorities are locked in'
+              : 'Your High Roller bets are locked in'}
           </p>
         </div>
 
@@ -86,7 +86,7 @@ export function LayerTransition({
             className="rounded-2xl border-2 border-casino-gold/30 bg-gradient-to-br from-casino-gold/10 to-transparent p-8 backdrop-blur-sm"
           >
             <p className="text-sm uppercase tracking-wider text-casino-gold mb-4">
-              Your Top Priority
+              Your Member Access Focus
             </p>
             <h2 className="text-2xl font-bold text-white mb-3">
               {selectedPainPoint.title}
@@ -125,10 +125,10 @@ export function LayerTransition({
               </div>
             </div>
             <p className="text-white/50">
-              Waiting for Layer 2 to begin...
+              Waiting for the High Roller Level to open...
             </p>
             <p className="text-sm text-white/30">
-              The facilitator will advance to solution voting shortly
+              The facilitator will advance to solution betting shortly
             </p>
           </motion.div>
         ) : stage === 'afterLayer1' ? (
@@ -148,7 +148,7 @@ export function LayerTransition({
               }}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold"
             >
-              <span>Layer 2 Ready!</span>
+              <span>High Roller Level Ready!</span>
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -164,7 +164,7 @@ export function LayerTransition({
               </svg>
             </motion.div>
             <p className="text-white/50">
-              Get ready to vote on solutions for your priority area
+              Get ready to invest in bold solutions for your priority area
             </p>
           </motion.div>
         ) : (

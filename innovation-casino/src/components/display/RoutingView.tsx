@@ -215,7 +215,7 @@ export function RoutingView({ session }: RoutingViewProps) {
         className="mt-12 text-center"
       >
         <p className="text-2xl text-gray-300 projector-text">
-          {animationPhase === 'revealing' ? 'Layer 2 will focus on solutions for each group' : 'Analyzing priorities...'}
+          {animationPhase === 'revealing' ? 'High Roller level will focus on solutions for each group' : 'Analyzing priorities...'}
         </p>
       </motion.div>
     </div>

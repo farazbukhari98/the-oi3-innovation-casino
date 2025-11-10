@@ -1,12 +1,12 @@
 'use client';
 
-import { Session } from '@/types/session';
+import { Session, SolutionScenario } from '@/types/session';
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { database } from '@/lib/firebase';
 import { ref, onValue } from 'firebase/database';
 import { Vote, ChipType, ChipAllocation } from '@/types/vote';
-import { CHIP_COLORS, PAIN_POINT_DEFINITIONS } from '@/lib/constants';
+import { CHIP_COLORS } from '@/lib/constants';
 import { Participant } from '@/types/participant';
 
 interface LiveVotingLayer2ViewProps {
@@ -18,8 +18,15 @@ type SolutionTotals = ChipAllocation;
 type GroupAllocations = Record<string, SolutionTotals>;
 type Layer2Allocations = Record<string, GroupAllocations>;
 
-function createInitialGroupAllocations(): Layer2Allocations {
-  return PAIN_POINT_DEFINITIONS.reduce((groupAcc, painPoint) => {
+interface PainPointCatalogEntry {
+  id: string;
+  title: string;
+  description: string;
+  solutions: SolutionScenario[];
+}
+
+function createInitialGroupAllocations(painPoints: PainPointCatalogEntry[]): Layer2Allocations {
+  return painPoints.reduce((groupAcc, painPoint) => {
     groupAcc[painPoint.id] = painPoint.solutions.reduce((solutionAcc, solution) => {
       solutionAcc[solution.id] = { time: 0, talent: 0, trust: 0 };
       return solutionAcc;
@@ -29,18 +36,36 @@ function createInitialGroupAllocations(): Layer2Allocations {
 }
 
 export function LiveVotingLayer2View({ session }: LiveVotingLayer2ViewProps) {
-  const [allocationsByGroup, setAllocationsByGroup] = useState<Layer2Allocations>(createInitialGroupAllocations);
+  const painPointCatalog = useMemo<PainPointCatalogEntry[]>(() => {
+    return session.scenarioOrder.map((id) => {
+      const scenario = session.scenarios[id];
+      return {
+        id,
+        title: scenario?.title ?? 'Focus Area',
+        description: scenario?.description ?? '',
+        solutions: session.solutionsByPainPoint[id] ?? [],
+      };
+    });
+  }, [session.scenarioOrder, session.scenarios, session.solutionsByPainPoint]);
+
+  const [allocationsByGroup, setAllocationsByGroup] = useState<Layer2Allocations>(() =>
+    createInitialGroupAllocations(painPointCatalog)
+  );
   const [participantCounts, setParticipantCounts] = useState<Record<string, number>>({});
   const [timeLeft, setTimeLeft] = useState(session.settings.layerDurations?.layer2 || 420);
+
+  useEffect(() => {
+    setAllocationsByGroup(createInitialGroupAllocations(painPointCatalog));
+  }, [painPointCatalog]);
 
   // Find which pain point has the most participants (primary focus)
   const primaryPainPoint = useMemo(() => {
     const counts = Object.entries(participantCounts);
-    if (counts.length === 0) return PAIN_POINT_DEFINITIONS[0];
+    if (counts.length === 0) return painPointCatalog[0];
 
     const sorted = counts.sort((a, b) => b[1] - a[1]);
-    return PAIN_POINT_DEFINITIONS.find(pp => pp.id === sorted[0][0]) || PAIN_POINT_DEFINITIONS[0];
-  }, [participantCounts]);
+    return painPointCatalog.find(pp => pp.id === sorted[0][0]) || painPointCatalog[0];
+  }, [participantCounts, painPointCatalog]);
 
   useEffect(() => {
     if (!session.id) {
@@ -73,11 +98,11 @@ export function LiveVotingLayer2View({ session }: LiveVotingLayer2ViewProps) {
     const unsubscribeVotes = onValue(votesRef, (snapshot) => {
       const voteRecords = snapshot.val() as Record<string, Vote> | null;
       if (!voteRecords) {
-        setAllocationsByGroup(createInitialGroupAllocations());
+        setAllocationsByGroup(createInitialGroupAllocations(painPointCatalog));
         return;
       }
 
-      const groupedAllocations = createInitialGroupAllocations();
+      const groupedAllocations = createInitialGroupAllocations(painPointCatalog);
       Object.values(voteRecords).forEach((vote) => {
         if (vote.sessionId !== session.id || vote.layer !== 'layer2' || !vote.painPointId) {
           return;
@@ -104,7 +129,7 @@ export function LiveVotingLayer2View({ session }: LiveVotingLayer2ViewProps) {
       unsubscribeParticipants();
       unsubscribeVotes();
     };
-  }, [session.id]);
+  }, [session.id, painPointCatalog]);
 
   // Countdown timer
   useEffect(() => {
@@ -142,7 +167,7 @@ export function LiveVotingLayer2View({ session }: LiveVotingLayer2ViewProps) {
           animate={{ opacity: 1, y: 0 }}
           className="text-display-2xl font-heading text-gold-gradient mb-2 projector-text"
         >
-          LAYER 2: SOLUTIONS
+          HIGH ROLLER: SOLUTIONS
         </motion.h1>
         <p className="text-display-lg text-gray-300 projector-text mb-1">
           Voting on solutions for: <span className="text-casino-gold font-bold">{primaryPainPoint.title}</span>
@@ -179,6 +204,11 @@ export function LiveVotingLayer2View({ session }: LiveVotingLayer2ViewProps) {
           >
             <div className="space-y-1 mb-2">
               <h3 className="text-display-base font-bold text-white">{solution.title}</h3>
+              {solution.innovationLabel && (
+                <p className="text-[10px] uppercase tracking-[0.3em] text-casino-gold">
+                  {solution.innovationLabel}
+                </p>
+              )}
               <p className="text-display-xs text-gray-400 line-clamp-2">{solution.description}</p>
             </div>
 
@@ -224,7 +254,7 @@ export function LiveVotingLayer2View({ session }: LiveVotingLayer2ViewProps) {
       <div className="border-t border-white/10 pt-2">
         <p className="text-display-xs uppercase tracking-wider text-gray-400 mb-1">Other Groups</p>
         <div className="flex gap-3 overflow-x-auto">
-          {PAIN_POINT_DEFINITIONS.filter(pp => pp.id !== primaryPainPoint.id).map(pp => {
+          {painPointCatalog.filter(pp => pp.id !== primaryPainPoint.id).map(pp => {
             const groupTotal = Object.values(allocationsByGroup[pp.id] || {})
               .reduce((sum, alloc) => sum + alloc.time + alloc.talent + alloc.trust, 0);
             return (

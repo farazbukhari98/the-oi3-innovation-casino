@@ -111,12 +111,12 @@ export function getStatusText(status: string): string {
   const statusTexts: { [key: string]: string } = {
     'waiting': 'Waiting to Start',
     'betting': 'Betting Live',
-    'betting_layer1': 'Layer 1 Voting',
-    'results_layer1': 'Layer 1 Results',
-    'routing': 'Routing Participants',
-    'betting_layer2': 'Layer 2 Voting',
-    'results_layer2': 'Layer 2 Results',
-    'insights': 'Insights & Debrief',
+    'betting_layer1': 'Member Access Level',
+    'results_layer1': 'Member Access Insights',
+    'routing': 'Routing High Rollers',
+    'betting_layer2': 'High Roller Level',
+    'results_layer2': 'High Roller Insights',
+    'insights': 'Combined Insights & Debrief',
     'results': 'Final Results',
     'closed': 'Session Closed',
   };
@@ -134,14 +134,14 @@ export function calculateBoldnessIndex(
   let totalShift = 0;
 
   // Add positive weight for risky tables
-  const riskyTables = ['wild-card', 'moonshot'];
+  const riskyTables = ['wild_card', 'moonshot'];
   riskyTables.forEach(table => {
     const shift = phase2Percentages[table] - phase1Percentages[table];
     totalShift += shift;
   });
 
   // Subtract for safe table
-  const safeBetShift = phase2Percentages['safe-bet'] - phase1Percentages['safe-bet'];
+  const safeBetShift = phase2Percentages['safe_bet'] - phase1Percentages['safe_bet'];
   totalShift -= safeBetShift;
 
   return Math.round(totalShift * 10) / 10;

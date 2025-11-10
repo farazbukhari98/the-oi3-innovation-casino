@@ -55,14 +55,14 @@ function DisplayScreenContent() {
       {/* Pre-session */}
       {session.status === 'waiting' && <PreSessionView session={session} />}
 
-      {/* Layer 1 */}
+      {/* Member Access Level */}
       {session.status === 'betting_layer1' && <LiveVotingLayer1View session={session} />}
       {session.status === 'results_layer1' && <ResultsLayer1View session={session} />}
 
       {/* Routing transition */}
       {session.status === 'routing' && <RoutingView session={session} />}
 
-      {/* Layer 2 */}
+      {/* High Roller Level */}
       {session.status === 'betting_layer2' && <LiveVotingLayer2View session={session} />}
       {session.status === 'results_layer2' && <ResultsLayer2View session={session} />}
 

@@ -88,7 +88,7 @@ export function ResultsLayer1View({ session }: { session: Session }) {
           animate={{ opacity: 1, y: 0 }}
           className="text-display-3xl font-heading text-gold-gradient mb-2 projector-text"
         >
-          LAYER 1 PRIORITIES
+          MEMBER ACCESS PRIORITIES
         </motion.h1>
         <p className="text-display-xl text-gray-300 projector-text">
           Where the organization wants to focus innovation

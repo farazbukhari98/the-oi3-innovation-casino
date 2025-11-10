@@ -150,11 +150,11 @@ export function ResultsView({ session }: ResultsViewProps) {
         className="mt-10 text-center space-y-3"
       >
         <p className="text-2xl md:text-5xl text-gray-300">
-          Layer 1 Allocations:{' '}
+          Member Access Allocations:{' '}
           <span className="text-casino-gold font-bold">{summary.layer1Allocations}</span>
         </p>
         <p className="text-xl md:text-4xl text-gray-300">
-          Layer 1 Chips Invested:{' '}
+          Member Access Chips Invested:{' '}
           <span className="text-casino-gold font-bold">{layer1Results.totalChips}</span>
         </p>
         {layer2Highlights.length > 0 && (
@@ -164,7 +164,7 @@ export function ResultsView({ session }: ResultsViewProps) {
                 key={highlight.id}
                 className="rounded-2xl border border-white/10 bg-white/5 px-6 py-4"
               >
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Layer 2 Group</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-400">High Roller Group</p>
                 <p className="text-xl font-semibold text-white">{highlight.title}</p>
                 <p className="text-gray-300 text-sm">
                   {highlight.allocations} allocations · {highlight.chips} chips

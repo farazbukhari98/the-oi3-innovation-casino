@@ -4,11 +4,11 @@ import { useRef, useState, useCallback } from 'react';
 import { useVoting } from '@/hooks/useVoting';
 import { useSound } from '@/hooks/useSound';
 import { useParticipantState } from '@/hooks/useParticipantState';
-import { Session } from '@/types/session';
+import { Session, ScenarioState, SolutionScenario } from '@/types/session';
 import { Participant } from '@/types/participant';
 import { ChipType, VotingLayer } from '@/types/vote';
 import { getErrorMessage } from '@/lib/utils';
-import { PAIN_POINT_DEFINITIONS, DEFAULT_CHIPS_PER_TYPE } from '@/lib/constants';
+import { DEFAULT_CHIPS_PER_TYPE, BOLDNESS_META } from '@/lib/constants';
 
 // Components
 import { PokerTable } from './PokerTable';
@@ -33,11 +33,18 @@ export function VotingInterfaceV2({
   const chipsPerType = session.settings.chipsPerType ?? DEFAULT_CHIPS_PER_TYPE;
 
   // Determine which scenarios to show based on layer
-  const scenariosToShow = currentLayer === 'layer1'
-    ? PAIN_POINT_DEFINITIONS
-    : participant.layer1Selection
-      ? PAIN_POINT_DEFINITIONS.find(pp => pp.id === participant.layer1Selection)?.solutions || []
+  const memberAccessScenarios: ScenarioState[] = session.scenarioOrder
+    .map((id) => session.scenarios[id])
+    .filter((scenario): scenario is ScenarioState => Boolean(scenario));
+
+  const highRollerScenarios: SolutionScenario[] =
+    participant.layer1Selection
+      ? session.solutionsByPainPoint[participant.layer1Selection] ?? []
       : [];
+
+  const scenariosToShow = currentLayer === 'layer1'
+    ? memberAccessScenarios
+    : highRollerScenarios;
 
   const scenarioIds = scenariosToShow.map(s => s.id);
 
@@ -159,7 +166,12 @@ export function VotingInterfaceV2({
   };
 
   // Create scenario cards
-  const cards = scenariosToShow.map((scenario, index) => (
+  const isHighRoller = currentLayer === 'layer2';
+
+  const cards = scenariosToShow.map((scenario, index) => {
+    const boldnessTier = isHighRoller && 'boldness' in scenario ? scenario.boldness : undefined;
+    const tierMeta = boldnessTier ? BOLDNESS_META[boldnessTier] : undefined;
+    return (
     <div
       key={scenario.id}
       ref={(el) => { cardRefs.current[scenario.id] = el; }}
@@ -172,9 +184,13 @@ export function VotingInterfaceV2({
         onPlaceChip={() => handlePlaceChip(scenario.id)}
         onRemoveChip={(type) => handleRemoveChip(scenario.id, type)}
         index={index}
+        badgeLabel={isHighRoller ? tierMeta?.shortLabel : undefined}
+        badgeDescription={isHighRoller ? (scenario as SolutionScenario).innovationLabel : undefined}
+        badgeAccent={tierMeta?.accent}
       />
     </div>
-  ));
+  );
+  });
 
   // Center content (pot area)
   const centerContent = (

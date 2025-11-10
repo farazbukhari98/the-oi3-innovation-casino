@@ -6,6 +6,7 @@ import {
   Scenario,
   ScenarioState,
   SolutionScenario,
+  InnovationBoldness,
 } from '@/types/session';
 import { Participant } from '@/types/participant';
 import { Vote, ScenarioAllocations, ChipAllocation, VotingLayer } from '@/types/vote';
@@ -15,6 +16,7 @@ import {
   DEFAULT_SCENARIOS,
   DEFAULT_CHIPS_PER_TYPE,
   DEFAULT_LAYER_DURATIONS,
+  BOLDNESS_META,
 } from './constants';
 import { calculatePercentage, determineTopScenario, sumChipAllocation } from './utils';
 import { buildResultsSummary } from './gameLogic';
@@ -452,11 +454,23 @@ export async function hasParticipantSubmittedAllocation(
 
 // ==================== RESULTS FUNCTIONS ====================
 
+interface AggregateOptions {
+  solutionMeta?: Record<string, SolutionScenario>;
+}
+
+type BoldnessTracker = ChipAllocation & {
+  totalChips: number;
+  allocationCount: number;
+};
+
 function aggregateLayerResults(
   scenarios: Scenario[],
-  votes: Vote[]
+  votes: Vote[],
+  options?: AggregateOptions
 ): LayerResults {
   const totals: Record<string, ChipAllocation & { totalChips: number }> = {};
+  const boldnessTotals: Partial<Record<string, BoldnessTracker>> = {};
+  const metaLookup = options?.solutionMeta ?? {};
   scenarios.forEach((scenario) => {
     totals[scenario.id] = { time: 0, talent: 0, trust: 0, totalChips: 0 };
   });
@@ -470,16 +484,42 @@ function aggregateLayerResults(
       totals[scenarioId].talent += allocation.talent;
       totals[scenarioId].trust += allocation.trust;
       totals[scenarioId].totalChips += sumChipAllocation(allocation);
+
+      const details = metaLookup[scenarioId];
+      if (details?.boldness) {
+        const tierKey = details.boldness;
+        if (!boldnessTotals[tierKey]) {
+          boldnessTotals[tierKey] = {
+            time: 0,
+            talent: 0,
+            trust: 0,
+            totalChips: 0,
+            allocationCount: 0,
+          };
+        }
+        const tracker = boldnessTotals[tierKey]!;
+        const chipSum = sumChipAllocation(allocation);
+        tracker.time += allocation.time;
+        tracker.talent += allocation.talent;
+        tracker.trust += allocation.trust;
+        tracker.totalChips += chipSum;
+        if (chipSum > 0) {
+          tracker.allocationCount += 1;
+        }
+      }
     });
   });
 
   const scenariosWithTotals: ScenarioResults[] = scenarios.map((scenario) => {
     const scenarioTotals = totals[scenario.id] || { time: 0, talent: 0, trust: 0, totalChips: 0 };
     const totalForScenario = scenarioTotals.totalChips || 0;
+    const solutionDetails = metaLookup[scenario.id];
     return {
       scenarioId: scenario.id,
       title: scenario.title,
       description: scenario.description,
+      boldness: solutionDetails?.boldness,
+      innovationLabel: solutionDetails?.innovationLabel,
       totals: scenarioTotals,
       percentages: {
         time: calculatePercentage(scenarioTotals.time, totalForScenario),
@@ -489,10 +529,37 @@ function aggregateLayerResults(
     };
   });
 
+  const layerTotalChips = votes.reduce((sum, vote) => sum + vote.totalChips, 0);
+  const boldnessBreakdown =
+    options?.solutionMeta && layerTotalChips > 0
+      ? Object.entries(boldnessTotals).reduce<NonNullable<LayerResults['boldnessTotals']>>((acc, [tier, tracker]) => {
+          if (!tracker) {
+            return acc;
+          }
+          const typedTier = tier as InnovationBoldness;
+          const meta = BOLDNESS_META[typedTier];
+          acc[typedTier] = {
+            tier: typedTier,
+            label: meta?.shortLabel || tier,
+            innovationLabel: meta?.innovationLabel || '',
+            totals: {
+              time: tracker.time,
+              talent: tracker.talent,
+              trust: tracker.trust,
+              totalChips: tracker.totalChips,
+            },
+            allocationCount: tracker.allocationCount,
+            percentageOfLayer: calculatePercentage(tracker.totalChips, layerTotalChips),
+          };
+          return acc;
+        }, {} as NonNullable<LayerResults['boldnessTotals']>)
+      : undefined;
+
   return {
     totalAllocations: votes.length,
-    totalChips: votes.reduce((sum, vote) => sum + vote.totalChips, 0),
+    totalChips: layerTotalChips,
     scenarios: scenariosWithTotals,
+    boldnessTotals: boldnessBreakdown,
   };
 }
 
@@ -547,6 +614,17 @@ function aggregateDepartmentStats(
           departmentStats.topScenarioId = scenarioId;
         }
       }
+
+      if (vote.layer === 'layer2') {
+        const solution = solutionMap[scenarioId];
+        if (solution?.boldness) {
+          if (!departmentStats.boldnessTotals) {
+            departmentStats.boldnessTotals = {};
+          }
+          departmentStats.boldnessTotals[solution.boldness] =
+            (departmentStats.boldnessTotals[solution.boldness] || 0) + delta;
+        }
+      }
     });
   });
 
@@ -574,7 +652,13 @@ export async function calculateSessionResults(sessionId: string): Promise<Sessio
   const layer2Results: Record<string, LayerResults> = {};
   Object.entries(session.solutionsByPainPoint).forEach(([painPointId, solutions]) => {
     const relevantVotes = layer2Votes.filter((vote) => vote.painPointId === painPointId);
-    layer2Results[painPointId] = aggregateLayerResults(solutions, relevantVotes);
+    const solutionMeta = solutions.reduce<Record<string, SolutionScenario>>((acc, solution) => {
+      acc[solution.id] = solution;
+      return acc;
+    }, {});
+    layer2Results[painPointId] = aggregateLayerResults(solutions, relevantVotes, {
+      solutionMeta,
+    });
   });
 
   const participants = await getSessionParticipants(sessionId);

@@ -51,7 +51,7 @@ export function FacilitatorInsights({ session }: FacilitatorInsightsProps) {
     const topPainPoint = results.layer1.scenarios[0];
     if (topPainPoint) {
       items.push(
-        `${topPainPoint.title} captured the largest share of chips, meaning the room wants to focus on ${topPainPoint.description?.toLowerCase()}`
+        `${topPainPoint.title} captured the largest share of Member Access chips, so the room wants to focus on ${topPainPoint.description?.toLowerCase()}.`
       );
     }
 
@@ -62,7 +62,15 @@ export function FacilitatorInsights({ session }: FacilitatorInsightsProps) {
       const leadingSolution = topLayer2Entry[1].scenarios[0];
       if (painPoint && leadingSolution) {
         items.push(
-          `In solutions, the ${painPoint.title} table placed ${leadingSolution.totals.totalChips} chips on ${leadingSolution.title}, signaling confidence in that path.`
+          `At the High Roller tables, ${painPoint.title} players placed ${leadingSolution.totals.totalChips} chips on ${leadingSolution.title}, signaling confidence in that path.`
+        );
+      }
+      const boldnessLeader = topLayer2Entry[1].boldnessTotals
+        ? Object.values(topLayer2Entry[1].boldnessTotals).sort((a, b) => b.totals.totalChips - a.totals.totalChips)[0]
+        : undefined;
+      if (boldnessLeader) {
+        items.push(
+          `${painPoint?.title ?? 'This group'} skewed ${boldnessLeader.label} with ${boldnessLeader.totals.totalChips} chips — keep an eye on why they favor ${boldnessLeader.innovationLabel.toLowerCase()}.`
         );
       }
     }
@@ -72,7 +80,7 @@ export function FacilitatorInsights({ session }: FacilitatorInsightsProps) {
           .sort(([, a], [, b]) => (b?.totalChips ?? 0) - (a?.totalChips ?? 0))[0]
       : undefined;
     if (topDepartment) {
-      items.push(`${topDepartment[0]} was the most active department with ${topDepartment[1].totalChips} Layer 1 chips.`);
+      items.push(`${topDepartment[0]} was the most active department with ${topDepartment[1].totalChips} Member Access chips.`);
     }
 
     return items;

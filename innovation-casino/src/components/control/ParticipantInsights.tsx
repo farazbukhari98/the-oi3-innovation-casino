@@ -90,12 +90,12 @@ export function ParticipantInsights({ sessionId }: ParticipantInsightsProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Layer 1 Complete</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Member Access Complete</p>
           <p className="text-2xl font-bold text-casino-gold">{progressLayer1}%</p>
           <p className="text-xs text-gray-500">{stats.layer1Completed} participants</p>
         </div>
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Layer 2 Complete</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-gray-400">High Roller Complete</p>
           <p className="text-2xl font-bold text-casino-gold">{progressLayer2}%</p>
           <p className="text-xs text-gray-500">{stats.layer2Completed} participants</p>
         </div>
@@ -109,7 +109,7 @@ export function ParticipantInsights({ sessionId }: ParticipantInsightsProps) {
         </div>
       ) : (
         <p className="text-sm text-gray-400">
-          Routing data will appear after participants lock in Layer 1 priorities.
+          Routing data will appear after participants lock in Member Access priorities.
         </p>
       )}
     </div>

@@ -13,6 +13,9 @@ interface ScenarioCardProps {
   onRemoveChip: (type: ChipType) => void;
   isHighlighted?: boolean;
   index: number;
+  badgeLabel?: string;
+  badgeDescription?: string;
+  badgeAccent?: string;
 }
 
 const CHIP_COLORS = {
@@ -76,6 +79,9 @@ export function ScenarioCard({
   onRemoveChip,
   isHighlighted = false,
   index,
+  badgeLabel,
+  badgeDescription,
+  badgeAccent,
 }: ScenarioCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const totalChips = allocation.time + allocation.talent + allocation.trust;
@@ -117,11 +123,26 @@ export function ScenarioCard({
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <div className="text-xs uppercase tracking-wider text-casino-gold mb-1">
-              Scenario {index + 1}
+            <div className="flex items-center gap-2 mb-1">
+              <div className="text-xs uppercase tracking-wider text-casino-gold">
+                Scenario {index + 1}
+              </div>
+              {badgeLabel && (
+                <span
+                  className={`
+                    inline-flex items-center px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em]
+                    ${badgeAccent ? `bg-gradient-to-r ${badgeAccent} text-black` : 'bg-white/10 text-white/80'}
+                  `}
+                >
+                  {badgeLabel}
+                </span>
+              )}
             </div>
             <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
             <p className="text-sm text-white/70 line-clamp-2">{description}</p>
+            {badgeDescription && (
+              <p className="text-xs text-white/50 mt-1">{badgeDescription}</p>
+            )}
           </div>
           <div className="ml-4 text-right">
             <div className="text-3xl font-bold text-casino-gold">{totalChips}</div>

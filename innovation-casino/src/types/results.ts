@@ -1,9 +1,12 @@
 import { ChipAllocation } from './vote';
+import { InnovationBoldness } from './session';
 
 export interface ScenarioResults {
   scenarioId: string;
   title: string;
   description: string;
+  boldness?: InnovationBoldness;
+  innovationLabel?: string;
   totals: ChipAllocation & {
     totalChips: number;
   };
@@ -14,10 +17,20 @@ export interface ScenarioResults {
   };
 }
 
+export interface BoldnessTotals {
+  tier: InnovationBoldness;
+  label: string;
+  innovationLabel: string;
+  totals: ChipAllocation & { totalChips: number };
+  allocationCount: number;
+  percentageOfLayer: number;
+}
+
 export interface LayerResults {
   totalAllocations: number;
   totalChips: number;
   scenarios: ScenarioResults[];
+  boldnessTotals?: Partial<Record<InnovationBoldness, BoldnessTotals>>;
 }
 
 export interface ResultsSummary {
@@ -32,6 +45,7 @@ export interface DepartmentLayerStats {
   totalChips: number;
   totalParticipants: number;
   topScenarioId?: string;
+  boldnessTotals?: Partial<Record<InnovationBoldness, number>>;
 }
 
 export interface DepartmentInsights {

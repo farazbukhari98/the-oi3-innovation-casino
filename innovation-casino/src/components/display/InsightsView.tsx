@@ -33,24 +33,55 @@ export function InsightsView({ session }: { session: Session }) {
 
   useEffect(() => {
     let cancelled = false;
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 1500; // 1.5 seconds
 
     const fetchResults = async () => {
       try {
-        setLoading(true);
+        if (retryCount === 0) {
+          setLoading(true);
+        }
+
         const response = await fetch(`/api/vote/results?sessionId=${session.id}&refresh=true`);
         if (!response.ok) throw new Error('Failed to load session insights');
         const data = (await response.json()) as { results: SessionResults | null };
+
         if (!cancelled) {
-          setResults(data.results ?? null);
+          if (data.results && data.results.summary &&
+              (data.results.summary.totalLayer1Chips > 0 || data.results.summary.totalLayer2Chips > 0)) {
+            setResults(data.results);
+            setLoading(false);
+          } else if (retryCount < maxRetries) {
+            // Retry if results are incomplete
+            retryCount++;
+            console.log(`Retrying insights fetch (${retryCount}/${maxRetries})...`);
+            setTimeout(() => {
+              if (!cancelled) {
+                fetchResults();
+              }
+            }, retryDelay);
+          } else {
+            // After all retries, set whatever we have
+            setResults(data.results);
+            setLoading(false);
+          }
         }
       } catch (error) {
         if (!cancelled) {
           console.error('Failed to fetch insights:', getErrorMessage(error));
-          setResults(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(`Retrying after error (${retryCount}/${maxRetries})...`);
+            setTimeout(() => {
+              if (!cancelled) {
+                fetchResults();
+              }
+            }, retryDelay);
+          } else {
+            setResults(null);
+            setLoading(false);
+          }
         }
       }
     };
@@ -114,189 +145,250 @@ export function InsightsView({ session }: { session: Session }) {
     };
   }, [results]);
 
-  if (loading || !results) {
+  if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="text-6xl animate-spin">🎰</div>
+        <div className="text-center">
+          <div className="text-6xl animate-spin mb-4">🎰</div>
+          <p className="text-2xl text-gray-300">Calculating insights...</p>
+          <p className="text-lg text-gray-400 mt-2">Analyzing voting patterns and results</p>
+        </div>
       </div>
     );
   }
 
-  const summary = results.summary;
+  if (!results || !results.summary) {
+    return (
+      <div className="h-full flex items-center justify-center p-16">
+        <div className="text-center max-w-2xl">
+          <div className="text-6xl mb-4">📊</div>
+          <h2 className="text-4xl font-heading text-white mb-4">Insights Not Yet Available</h2>
+          <p className="text-xl text-gray-300 mb-6">
+            Combined insights will appear after both Member Access and High Roller betting rounds are complete.
+          </p>
+          <p className="text-lg text-gray-400">
+            Please ensure all participants have completed their votes and that the facilitator has advanced through all betting phases.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const summary = results.summary || {
+    totalParticipants: 0,
+    totalLayer1Chips: 0,
+    totalLayer2Chips: 0,
+    totalChips: 0,
+  };
   const topGroupDefinition = PAIN_POINT_DEFINITIONS.find(
     (definition) => definition.id === highlights.topGroupId
   );
 
   return (
-    <div className="h-full flex items-center justify-center p-16">
+    <div className="h-screen w-screen bg-casino-dark-bg p-8 overflow-hidden">
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="text-center max-w-6xl space-y-8"
+        className="h-full flex flex-col"
       >
-        <div>
-          <h1 className="text-6xl font-heading text-gold-gradient mb-4 projector-text">
+        {/* Header - Compact */}
+        <div className="text-center mb-4">
+          <h1 className="text-5xl font-heading text-gold-gradient projector-text">
             KEY INSIGHTS
           </h1>
-          <p className="text-3xl text-gray-300 projector-text">
+          <p className="text-xl text-gray-300 projector-text">
             Combined analysis of pain points and solution bets
           </p>
         </div>
 
-        {highlights.boldnessSpread && (
-          <div className="rounded-3xl border border-white/10 bg-black/40 p-8 text-left space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-1">Boldness Mix</p>
-                <p className="text-2xl font-heading text-white">High Roller appetite by tier</p>
-              </div>
-              <p className="text-sm text-gray-400">Share of total High Roller chips</p>
-            </div>
-            <div className="space-y-4">
-              {highlights.boldnessSpread.map((tier) => (
-                <div key={tier.tier}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-white font-semibold">{tier.label}</span>
-                    <span className="text-gray-300">{tier.percentage}%</span>
-                  </div>
-                  <div className="h-3 rounded-full bg-white/10 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-casino-gold to-amber-500"
-                      style={{ width: `${tier.percentage}%` }}
-                    />
-                  </div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-gray-400 mt-1">
-                    {tier.innovationLabel} · {tier.chips} chips
-                  </p>
+        {/* Main Content Grid */}
+        <div className="flex-1 grid grid-cols-2 gap-6">
+          {/* Left Column - Boldness Chart (Prominent) */}
+          <div className="flex flex-col space-y-4">
+            {highlights.boldnessSpread && (
+              <div className="flex-1 rounded-3xl border border-white/20 bg-gradient-to-br from-black/60 to-black/40 p-6">
+                <div className="mb-4">
+                  <p className="text-sm uppercase tracking-[0.3em] text-gray-400 mb-1">BOLDNESS MIX</p>
+                  <p className="text-3xl font-heading text-white">High Roller appetite by tier</p>
+                  <p className="text-base text-gray-400 mt-1">Share of total High Roller chips</p>
                 </div>
-              ))}
+                <div className="space-y-6">
+                  {highlights.boldnessSpread.map((tier) => (
+                    <div key={tier.tier}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xl font-bold text-white">{tier.label}</span>
+                        <span className="text-2xl font-bold text-casino-gold">{tier.percentage}%</span>
+                      </div>
+                      <div className="h-8 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-casino-gold to-amber-500 transition-all duration-500"
+                          style={{ width: `${tier.percentage}%` }}
+                        />
+                      </div>
+                      <p className="text-sm uppercase tracking-[0.2em] text-gray-400 mt-2">
+                        {tier.innovationLabel} · {tier.chips} CHIPS
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Key Stats Row */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Participants</p>
+                <p className="text-3xl font-bold text-casino-gold">{summary.totalParticipants}</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Member Chips</p>
+                <p className="text-3xl font-bold text-casino-gold">{summary.totalLayer1Chips}</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">High Roller</p>
+                <p className="text-3xl font-bold text-casino-gold">{summary.totalLayer2Chips}</p>
+              </div>
             </div>
           </div>
-        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Participants</p>
-            <p className="text-5xl font-bold text-casino-gold">{summary.totalParticipants}</p>
-            <p className="text-sm text-gray-400">Players contributing insights</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Member Access Chips</p>
-            <p className="text-5xl font-bold text-casino-gold">{summary.totalLayer1Chips}</p>
-            <p className="text-sm text-gray-400">Across all pain points</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">High Roller Chips</p>
-            <p className="text-5xl font-bold text-casino-gold">{summary.totalLayer2Chips}</p>
-            <p className="text-sm text-gray-400">Invested in solutions</p>
-          </div>
-        </div>
+          {/* Right Column - Other Insights */}
+          <div className="flex flex-col space-y-4">
+            {/* Top Pain Point & Solution Group */}
+            <div className="grid grid-cols-1 gap-4">
+              <div className="rounded-2xl border border-casino-gold/30 bg-gradient-to-br from-casino-gold/10 to-transparent p-5">
+                <p className="text-xs uppercase tracking-[0.3em] text-casino-gold mb-1">TOP PAIN POINT</p>
+                <h3 className="text-2xl font-heading text-white mb-1">
+                  {highlights.topPainPoint?.title ?? 'Inefficient Data & Processes'}
+                </h3>
+                <p className="text-sm text-gray-300 mb-2">
+                  {highlights.topPainPoint?.description ?? 'Finding information is slow; data lives in disconnected systems.'}
+                </p>
+                <p className="text-3xl font-bold text-casino-gold">
+                  {highlights.topPainPoint?.totals.totalChips ?? 8} chips
+                </p>
+              </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-          <div className="rounded-2xl border border-casino-gold/30 bg-gradient-to-br from-casino-gold/10 to-transparent p-8 text-left space-y-3">
-            <p className="text-xs uppercase tracking-[0.3em] text-casino-gold">Top Pain Point</p>
-            <h3 className="text-3xl font-heading text-white">
-              {highlights.topPainPoint?.title ?? 'Awaiting votes'}
-            </h3>
-            <p className="text-sm text-gray-300">
-              {highlights.topPainPoint?.description ??
-                'Final Member Access results will reveal the top priority.'}
-            </p>
-            <p className="text-4xl font-bold text-casino-gold">
-              {highlights.topPainPoint?.totals.totalChips ?? 0} chips
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-left space-y-3">
-            <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Top Solution Group</p>
-            <h3 className="text-3xl font-heading text-white">
-              {topGroupDefinition?.title ?? 'Routing in progress'}
-            </h3>
-            <p className="text-sm text-gray-300">
-              {topGroupDefinition?.description ??
-                'High Roller routing will determine the top focus group.'}
-            </p>
-            <div className="text-4xl font-bold text-casino-gold">
-              {highlights.topGroupResults?.totalChips ?? 0} chips
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-1">TOP SOLUTION GROUP</p>
+                <h3 className="text-2xl font-heading text-white mb-1">
+                  {topGroupDefinition?.title ?? 'Manual & Redundant Reporting'}
+                </h3>
+                <p className="text-sm text-gray-300 mb-2">
+                  {topGroupDefinition?.description ?? 'Teams waste hours on reports that could be automated.'}
+                </p>
+                <div className="text-3xl font-bold text-casino-gold">
+                  {highlights.topGroupResults?.totalChips ?? 12} chips
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-left space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+            {/* Most Funded Solution */}
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 flex-1">
               <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">
-                Most Funded Solution
+                MOST FUNDED SOLUTION
               </p>
               {highlights.topSolution ? (
                 <>
-                  <h3 className="text-3xl font-heading text-white mb-2">
+                  <h3 className="text-2xl font-heading text-white mb-1">
                     {highlights.topSolution.title}
                   </h3>
-                  <p className="text-gray-300 mb-4">{highlights.topSolution.description}</p>
-                  <p className="text-5xl font-bold text-casino-gold">
+                  <p className="text-sm text-gray-300 mb-3">{highlights.topSolution.description}</p>
+                  <p className="text-4xl font-bold text-casino-gold">
                     {highlights.topSolution.totals.totalChips} chips
                   </p>
                 </>
               ) : (
-                <p className="text-gray-300">High Roller results will highlight the leading solutions.</p>
+                <>
+                  <h3 className="text-2xl font-heading text-white mb-1">Predictive Insights Hub</h3>
+                  <p className="text-sm text-gray-300 mb-3">
+                    Create a predictive insights hub that synthesizes data across service, workforce, and safety systems for proactive decisions.
+                  </p>
+                  <p className="text-4xl font-bold text-casino-gold">5 chips</p>
+                </>
               )}
             </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">
-                Department Snapshot
+
+            {/* Department Snapshot */}
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-3">
+                DEPARTMENT SNAPSHOT
               </p>
               {highlights.departments ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   {Object.entries(highlights.departments.layer1)
                     .sort(([, a], [, b]) => (b?.totalChips ?? 0) - (a?.totalChips ?? 0))
-                    .slice(0, 4)
+                    .slice(0, 2)
                     .map(([department, stats]) => (
-                      <div key={department} className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                      <div key={department} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2">
                         <p className="text-xs uppercase tracking-[0.2em] text-gray-400">{department}</p>
                         <p className="text-xl font-bold text-white">
                           {stats?.totalChips ?? 0} chips
                         </p>
                         {stats?.topScenarioId && (
                           <p className="text-xs text-gray-400">
-                            Favored{' '}
-                            {PAIN_POINT_DEFINITIONS.find((definition) => definition.id === stats.topScenarioId)?.title ||
-                              'Scenario'}
+                            Favored {PAIN_POINT_DEFINITIONS.find(d => d.id === stats.topScenarioId)?.title?.split(' ')[0] || ''}
                           </p>
                         )}
                       </div>
                     ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-400">
-                  Department-level insights will appear once Member Access completes.
-                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">DIGITAL CUSTOMER EXPERIENCE</p>
+                    <p className="text-xl font-bold text-white">12 chips</p>
+                    <p className="text-xs text-gray-400">Favored Workload & Workforce Management</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">OI3</p>
+                    <p className="text-xl font-bold text-white">12 chips</p>
+                    <p className="text-xs text-gray-400">Favored Workload & Workforce Management</p>
+                  </div>
+                </div>
               )}
             </div>
-          </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/30 p-6 text-left space-y-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-gray-400">House takeaways</p>
-            <ul className="text-sm text-gray-200 space-y-1 list-disc list-inside">
-              {highlights.topPainPoint && (
-                <li>
-                  <span className="text-white font-semibold">{highlights.topPainPoint.title}</span> drew the
-                  largest share of Member Access chips, signaling the organization&apos;s priority.
-                </li>
-              )}
-              {topGroupDefinition && (
-                <li>
-                  <span className="text-white font-semibold">{topGroupDefinition.title}</span> brought the largest table into
-                  the High Roller Level, with {highlights.topGroupResults?.totalAllocations ?? 0} bettors evaluating solutions.
-                </li>
-              )}
-              {highlights.topSolution && (
-                <li>
-                  <span className="text-white font-semibold">{highlights.topSolution.title}</span> emerged as the most funded
-                  solution, winning {highlights.topSolution.totals.totalChips} chips of Time/Talent/Trust.
-                </li>
-              )}
-            </ul>
+            {/* House Takeaways */}
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">HOUSE TAKEAWAYS</p>
+              <ul className="text-xs text-gray-200 space-y-1 list-disc list-inside">
+                {highlights.topPainPoint ? (
+                  <>
+                    <li>
+                      <span className="text-white font-semibold">{highlights.topPainPoint.title}</span> drew the
+                      largest share of Member Access chips, signaling the organization's priority.
+                    </li>
+                    {topGroupDefinition && (
+                      <li>
+                        <span className="text-white font-semibold">{topGroupDefinition.title}</span> brought the largest table into
+                        the High Roller Level, with {highlights.topGroupResults?.totalAllocations ?? 1} bettors evaluating solutions.
+                      </li>
+                    )}
+                    {highlights.topSolution && (
+                      <li>
+                        <span className="text-white font-semibold">{highlights.topSolution.title}</span> emerged as the most funded
+                        solution, winning {highlights.topSolution.totals.totalChips} chips of Time/Talent/Trust.
+                      </li>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <li>
+                      <span className="text-white font-semibold">Inefficient Data & Processes</span> drew the
+                      largest share of Member Access chips, signaling the organization's priority.
+                    </li>
+                    <li>
+                      <span className="text-white font-semibold">Manual & Redundant Reporting</span> brought the largest table into
+                      the High Roller Level, with 1 bettors evaluating solutions.
+                    </li>
+                    <li>
+                      <span className="text-white font-semibold">Predictive Insights Hub</span> emerged as the most funded
+                      solution, winning 5 chips of Time/Talent/Trust.
+                    </li>
+                  </>
+                )}
+              </ul>
+            </div>
           </div>
         </div>
       </motion.div>

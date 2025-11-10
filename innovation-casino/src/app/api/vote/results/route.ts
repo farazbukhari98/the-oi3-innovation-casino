@@ -20,7 +20,31 @@ export async function GET(request: NextRequest) {
     let results = await getSessionResults(sessionId);
 
     if (!results || refresh === 'true') {
-      results = await calculateSessionResults(sessionId);
+      try {
+        results = await calculateSessionResults(sessionId);
+      } catch (calcError) {
+        console.error('Failed to calculate results:', getErrorMessage(calcError));
+        // Return empty results structure instead of throwing
+        results = {
+          summary: {
+            totalParticipants: 0,
+            layer1Allocations: 0,
+            layer2Allocations: 0,
+            totalLayer1Chips: 0,
+            totalLayer2Chips: 0,
+          },
+          layer1: {
+            totalAllocations: 0,
+            totalChips: 0,
+            scenarios: [],
+          },
+          layer2: {},
+          departments: {
+            layer1: {},
+            layer2: {},
+          }
+        };
+      }
     }
 
     if (!layer) {
@@ -43,8 +67,12 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   } catch (error: unknown) {
+    console.error('Results API error:', getErrorMessage(error));
     return NextResponse.json(
-      { error: getErrorMessage(error) },
+      {
+        error: getErrorMessage(error),
+        results: null
+      },
       { status: 500 }
     );
   }

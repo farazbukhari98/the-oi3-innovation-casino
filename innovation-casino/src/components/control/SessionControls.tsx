@@ -136,6 +136,19 @@ export function SessionControls({
     }
   };
 
+  const handleRefreshResults = async () => {
+    try {
+      const response = await fetch(`/api/vote/results?sessionId=${session.id}&refresh=true`);
+      if (!response.ok) {
+        throw new Error('Failed to refresh results');
+      }
+      alert('Results refreshed successfully');
+    } catch (error) {
+      alert('Failed to refresh results. Check console for details.');
+      console.error('Failed to refresh results:', error);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-1">
@@ -231,6 +244,29 @@ export function SessionControls({
         <div className="text-center text-sm text-gray-400">
           Session has ended. Export results from the toolkit below.
         </div>
+      )}
+
+      {/* Refresh Results Button for insights/results phases */}
+      {(session.status === 'results_layer1' ||
+        session.status === 'results_layer2' ||
+        session.status === 'insights' ||
+        session.status === 'results') && (
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleRefreshResults}
+          className="w-full rounded-lg border border-gray-600 bg-gray-800/50 px-4 py-3 text-center hover:bg-gray-800/70 transition-all"
+        >
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-xl">🔄</span>
+            <span className="text-sm font-medium text-gray-300">
+              Recalculate Results
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Use this if results seem incomplete or outdated
+          </p>
+        </motion.button>
       )}
     </div>
   );

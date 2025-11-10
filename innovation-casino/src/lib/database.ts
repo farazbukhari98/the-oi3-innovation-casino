@@ -552,12 +552,11 @@ function aggregateLayerResults(
     const scenarioTotals = totals[scenario.id] || { time: 0, talent: 0, trust: 0, totalChips: 0 };
     const totalForScenario = scenarioTotals.totalChips || 0;
     const solutionDetails = metaLookup[scenario.id];
-    return {
+
+    const result: ScenarioResults = {
       scenarioId: scenario.id,
       title: scenario.title,
       description: scenario.description,
-      boldness: solutionDetails?.boldness,
-      innovationLabel: solutionDetails?.innovationLabel,
       totals: scenarioTotals,
       percentages: {
         time: calculatePercentage(scenarioTotals.time, totalForScenario),
@@ -565,6 +564,16 @@ function aggregateLayerResults(
         trust: calculatePercentage(scenarioTotals.trust, totalForScenario),
       },
     };
+
+    // Only add boldness and innovationLabel if they exist (Layer 2 only)
+    if (solutionDetails?.boldness) {
+      result.boldness = solutionDetails.boldness;
+    }
+    if (solutionDetails?.innovationLabel) {
+      result.innovationLabel = solutionDetails.innovationLabel;
+    }
+
+    return result;
   });
 
   const layerTotalChips = votes.reduce((sum, vote) => sum + vote.totalChips, 0);
@@ -593,12 +602,18 @@ function aggregateLayerResults(
         }, {} as NonNullable<LayerResults['boldnessTotals']>)
       : undefined;
 
-  return {
+  const result: LayerResults = {
     totalAllocations: votes.length,
     totalChips: layerTotalChips,
     scenarios: scenariosWithTotals,
-    boldnessTotals: boldnessBreakdown,
   };
+
+  // Only add boldnessTotals if it exists (Layer 2 only)
+  if (boldnessBreakdown && Object.keys(boldnessBreakdown).length > 0) {
+    result.boldnessTotals = boldnessBreakdown;
+  }
+
+  return result;
 }
 
 function aggregateDepartmentStats(

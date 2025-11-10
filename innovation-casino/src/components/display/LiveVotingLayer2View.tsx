@@ -58,6 +58,18 @@ export function LiveVotingLayer2View({ session }: LiveVotingLayer2ViewProps) {
     setAllocationsByGroup(createInitialGroupAllocations(painPointCatalog));
   }, [painPointCatalog]);
 
+  // Find which pain points have participants
+  const activePainPoints = useMemo(() => {
+    return painPointCatalog.filter(pp => {
+      const allocations = allocationsByGroup[pp.id];
+      if (!allocations) return false;
+      // Check if there are any chips allocated to this pain point
+      return Object.values(allocations).some(solution =>
+        (solution.time + solution.talent + solution.trust) > 0
+      );
+    });
+  }, [painPointCatalog, allocationsByGroup]);
+
   // Find which pain point has the most participants (primary focus)
   const primaryPainPoint = useMemo(() => {
     const counts = Object.entries(participantCounts);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateSessionStatus } from '@/lib/database';
+import { updateSessionStatus, calculateSessionResults } from '@/lib/database';
 import { SessionStatus } from '@/types/session';
 import { getErrorMessage } from '@/lib/utils';
 
@@ -25,6 +25,16 @@ export async function PUT(request: NextRequest) {
         { error: 'Status is required' },
         { status: 400 }
       );
+    }
+
+    // Calculate results when transitioning to results or insights views
+    if (status === 'results_layer1' || status === 'results_layer2' || status === 'insights' || status === 'results') {
+      try {
+        await calculateSessionResults(sessionId);
+      } catch (error) {
+        console.error('Failed to calculate results:', getErrorMessage(error));
+        // Continue with status update even if results calculation fails
+      }
     }
 
     await updateSessionStatus(sessionId, status);

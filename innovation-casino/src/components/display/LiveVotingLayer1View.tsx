@@ -1,12 +1,13 @@
 'use client';
 
 import { Session } from '@/types/session';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { database } from '@/lib/firebase';
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue, query, orderByChild, equalTo } from 'firebase/database';
 import { Vote, ChipType, ChipAllocation } from '@/types/vote';
 import { CHIP_COLORS, PAIN_POINT_DEFINITIONS } from '@/lib/constants';
+import { debounce, CacheManager } from '@/lib/performance';
 
 interface LiveVotingLayer1ViewProps {
   session: Session;
@@ -25,6 +26,9 @@ function createInitialTotals(): Record<string, AllocationTotals> {
 export function LiveVotingLayer1View({ session }: LiveVotingLayer1ViewProps) {
   const [allocations, setAllocations] = useState<Record<string, AllocationTotals>>(createInitialTotals);
   const [timeLeft, setTimeLeft] = useState(session.settings.layerDurations?.layer1 || 420);
+
+  // Cache for vote data to reduce redundant Firebase reads
+  const voteCache = useMemo(() => new CacheManager<Vote[]>(2), []); // 2 second TTL
 
   const painPointData = useMemo(() => {
     return PAIN_POINT_DEFINITIONS.map((pp) => {
@@ -50,19 +54,35 @@ export function LiveVotingLayer1View({ session }: LiveVotingLayer1ViewProps) {
     [painPointData]
   );
 
-  useEffect(() => {
-    const votesRef = ref(database, 'votes');
-    const unsubscribe = onValue(votesRef, (snapshot) => {
-      const voteRecords = snapshot.val() as Record<string, Vote> | null;
+  // Debounced function to process vote updates
+  // This prevents excessive re-renders when 100+ participants are voting
+  const processVoteUpdate = useCallback(
+    debounce((voteRecords: Record<string, Vote> | null) => {
       if (!voteRecords) {
         setAllocations(createInitialTotals());
+        voteCache.clear();
         return;
       }
 
+      // Filter votes for this session and layer
       const votes = Object.values(voteRecords).filter(
         (vote) => vote.sessionId === session.id && vote.layer === 'layer1'
       );
 
+      // Check if data is already in cache and unchanged
+      const cachedVotes = voteCache.get('layer1');
+      if (cachedVotes && cachedVotes.length === votes.length) {
+        // Quick check to see if data has changed
+        const cacheValid = votes.every((v, i) =>
+          cachedVotes[i] && v.participantId === cachedVotes[i].participantId
+        );
+        if (cacheValid) return;
+      }
+
+      // Update cache
+      voteCache.set('layer1', votes);
+
+      // Calculate new totals
       const nextTotals = createInitialTotals();
 
       votes.forEach((vote) => {
@@ -75,10 +95,26 @@ export function LiveVotingLayer1View({ session }: LiveVotingLayer1ViewProps) {
       });
 
       setAllocations(nextTotals);
+    }, 1000), // 1 second debounce
+    [session.id, voteCache]
+  );
+
+  useEffect(() => {
+    // Use Firebase query to only fetch votes for this session
+    // This significantly reduces data transfer when multiple sessions are running
+    const votesQuery = query(
+      ref(database, 'votes'),
+      orderByChild('sessionId'),
+      equalTo(session.id)
+    );
+
+    const unsubscribe = onValue(votesQuery, (snapshot) => {
+      const voteRecords = snapshot.val() as Record<string, Vote> | null;
+      processVoteUpdate(voteRecords);
     });
 
     return () => unsubscribe();
-  }, [session.id]);
+  }, [session.id, processVoteUpdate]);
 
   // Countdown timer
   useEffect(() => {

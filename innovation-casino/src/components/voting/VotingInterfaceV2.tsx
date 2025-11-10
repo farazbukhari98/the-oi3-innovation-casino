@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useMemo } from 'react';
 import { useVoting } from '@/hooks/useVoting';
 import { useSound } from '@/hooks/useSound';
 import { useParticipantState } from '@/hooks/useParticipantState';
@@ -9,6 +9,7 @@ import { Participant } from '@/types/participant';
 import { ChipType, VotingLayer } from '@/types/vote';
 import { getErrorMessage } from '@/lib/utils';
 import { DEFAULT_CHIPS_PER_TYPE, BOLDNESS_META } from '@/lib/constants';
+import { QueueManager } from '@/lib/performance';
 
 // Components
 import { PokerTable } from './PokerTable';
@@ -31,6 +32,27 @@ export function VotingInterfaceV2({
   onParticipantUpdate,
 }: VotingInterfaceV2Props) {
   const chipsPerType = session.settings.chipsPerType ?? DEFAULT_CHIPS_PER_TYPE;
+
+  // Submission queue to rate limit vote submissions
+  // This ensures we don't overwhelm the server with 100+ simultaneous requests
+  const submissionQueue = useMemo(() => new QueueManager<{
+    url: string;
+    body: string;
+  }, any>( async (item) => {
+    const response = await fetch(item.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: item.body,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to submit allocations');
+    }
+
+    return data;
+  }, 200), []); // 200ms delay between submissions to prevent server overload
 
   // Determine which scenarios to show based on layer
   const memberAccessScenarios: ScenarioState[] = session.scenarioOrder
@@ -103,7 +125,7 @@ export function VotingInterfaceV2({
     }
   }, [allocations, adjustAllocation, playSound, addFlyingChip]);
 
-  // Handle submission
+  // Handle submission with rate limiting via queue
   const handleSubmit = async () => {
     if (!isComplete) return;
 
@@ -113,9 +135,9 @@ export function VotingInterfaceV2({
     playSound('chipsLock');
 
     try {
-      const response = await fetch('/api/vote/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      // Use queue to rate limit submissions when 100+ participants submit simultaneously
+      const data = await submissionQueue.enqueue({
+        url: '/api/vote/submit',
         body: JSON.stringify({
           sessionId: session.id,
           participantId: participant.id,
@@ -125,9 +147,7 @@ export function VotingInterfaceV2({
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (data.error) {
         throw new Error(data.error || 'Failed to submit allocations');
       }
 

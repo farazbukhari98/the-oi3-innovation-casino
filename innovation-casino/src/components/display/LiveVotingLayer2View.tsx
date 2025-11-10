@@ -1,13 +1,14 @@
 'use client';
 
 import { Session, SolutionScenario } from '@/types/session';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { database } from '@/lib/firebase';
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue, query, orderByChild, equalTo } from 'firebase/database';
 import { Vote, ChipType, ChipAllocation } from '@/types/vote';
 import { CHIP_COLORS } from '@/lib/constants';
 import { Participant } from '@/types/participant';
+import { debounce, CacheManager } from '@/lib/performance';
 
 interface LiveVotingLayer2ViewProps {
   session: Session;
@@ -36,6 +37,8 @@ function createInitialGroupAllocations(painPoints: PainPointCatalogEntry[]): Lay
 }
 
 export function LiveVotingLayer2View({ session }: LiveVotingLayer2ViewProps) {
+  // Cache manager for vote data (2 second TTL to reduce Firebase reads)
+  const voteCache = useMemo(() => new CacheManager<Vote[]>(2), []);
   const painPointCatalog = useMemo<PainPointCatalogEntry[]>(() => {
     return session.scenarioOrder.map((id) => {
       const scenario = session.scenarios[id];
@@ -79,48 +82,24 @@ export function LiveVotingLayer2View({ session }: LiveVotingLayer2ViewProps) {
     return painPointCatalog.find(pp => pp.id === sorted[0][0]) || painPointCatalog[0];
   }, [participantCounts, painPointCatalog]);
 
-  useEffect(() => {
-    if (!session.id) {
-      return;
-    }
-
-    const participantsRef = ref(database, 'participants');
-    const votesRef = ref(database, 'votes');
-
-    const unsubscribeParticipants = onValue(participantsRef, (snapshot) => {
-      const participantRecords = snapshot.val() as Record<string, Participant> | null;
-      if (!participantRecords) {
-        setParticipantCounts({});
-        return;
-      }
-
-      const sessionParticipants = Object.values(participantRecords).filter(
-        (participant) => participant.sessionId === session.id
-      );
-
-      const counts: Record<string, number> = {};
-      sessionParticipants.forEach((participant) => {
-        if (participant.layer1Selection) {
-          counts[participant.layer1Selection] = (counts[participant.layer1Selection] || 0) + 1;
-        }
-      });
-      setParticipantCounts(counts);
-    });
-
-    const unsubscribeVotes = onValue(votesRef, (snapshot) => {
-      const voteRecords = snapshot.val() as Record<string, Vote> | null;
+  // Process vote updates with debouncing to prevent excessive re-renders
+  // This batches multiple rapid vote submissions into single update
+  const processVoteUpdate = useCallback(
+    debounce((voteRecords: Record<string, Vote> | null) => {
       if (!voteRecords) {
         setAllocationsByGroup(createInitialGroupAllocations(painPointCatalog));
         return;
       }
 
       const groupedAllocations = createInitialGroupAllocations(painPointCatalog);
-      Object.values(voteRecords).forEach((vote) => {
-        if (vote.sessionId !== session.id || vote.layer !== 'layer2' || !vote.painPointId) {
-          return;
-        }
 
-        const groupTotals = groupedAllocations[vote.painPointId];
+      // Filter and process only relevant votes for this session
+      const relevantVotes = Object.values(voteRecords).filter(
+        (vote) => vote.sessionId === session.id && vote.layer === 'layer2' && vote.painPointId
+      );
+
+      relevantVotes.forEach((vote) => {
+        const groupTotals = groupedAllocations[vote.painPointId!];
         if (!groupTotals) return;
 
         (Object.entries(vote.allocations) as Array<[string, ChipAllocation]>).forEach(
@@ -135,13 +114,71 @@ export function LiveVotingLayer2View({ session }: LiveVotingLayer2ViewProps) {
       });
 
       setAllocationsByGroup(groupedAllocations);
+    }, 1000), // 1 second debounce - batches rapid updates together
+    [session.id, painPointCatalog]
+  );
+
+  useEffect(() => {
+    if (!session.id) {
+      return;
+    }
+
+    // Use query to filter participants by session at database level
+    // This reduces data transfer for large numbers of participants
+    const participantsQuery = query(
+      ref(database, 'participants'),
+      orderByChild('sessionId'),
+      equalTo(session.id)
+    );
+
+    const votesRef = ref(database, 'votes');
+
+    // Process participant updates with debouncing
+    const processParticipantUpdate = debounce((participantRecords: Record<string, Participant> | null) => {
+      if (!participantRecords) {
+        setParticipantCounts({});
+        return;
+      }
+
+      const counts: Record<string, number> = {};
+      Object.values(participantRecords).forEach((participant) => {
+        if (participant.layer1Selection) {
+          counts[participant.layer1Selection] = (counts[participant.layer1Selection] || 0) + 1;
+        }
+      });
+      setParticipantCounts(counts);
+    }, 500); // 500ms debounce for participant updates
+
+    const unsubscribeParticipants = onValue(participantsQuery, (snapshot) => {
+      const participantRecords = snapshot.val() as Record<string, Participant> | null;
+      processParticipantUpdate(participantRecords);
+    });
+
+    const unsubscribeVotes = onValue(votesRef, (snapshot) => {
+      const voteRecords = snapshot.val() as Record<string, Vote> | null;
+
+      // Check cache first to avoid unnecessary processing
+      const cacheKey = `votes-${session.id}`;
+      const cachedVotes = voteCache.get(cacheKey);
+
+      if (cachedVotes && JSON.stringify(cachedVotes) === JSON.stringify(voteRecords)) {
+        return; // Skip if data hasn't changed
+      }
+
+      // Update cache
+      if (voteRecords) {
+        voteCache.set(cacheKey, Object.values(voteRecords));
+      }
+
+      processVoteUpdate(voteRecords);
     });
 
     return () => {
       unsubscribeParticipants();
       unsubscribeVotes();
+      voteCache.clear();
     };
-  }, [session.id, painPointCatalog]);
+  }, [session.id, processVoteUpdate]);
 
   // Countdown timer
   useEffect(() => {

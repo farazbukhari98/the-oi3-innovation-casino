@@ -1,12 +1,13 @@
 'use client';
 
 import { Session } from '@/types/session';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { LayerResults } from '@/types/results';
 import { PAIN_POINT_DEFINITIONS, CHIP_COLORS } from '@/lib/constants';
 import { ChipType } from '@/types/vote';
 import { getErrorMessage } from '@/lib/utils';
+import { CacheManager, throttle } from '@/lib/performance';
 
 const CHIP_TYPES: ChipType[] = ['time', 'talent', 'trust'];
 
@@ -21,37 +22,54 @@ export function ResultsLayer2View({ session }: { session: Session }) {
   const [layer2Results, setLayer2Results] = useState<Record<string, LayerResults>>({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
+  // Cache results for 5 seconds to avoid redundant API calls
+  const resultsCache = useMemo(() => new CacheManager<Record<string, LayerResults>>(5), []); // 5 second TTL
 
-    const fetchResults = async () => {
+  // Throttled fetch function to prevent rapid repeated API calls
+  // Important when multiple high roller tables finish voting simultaneously
+  const fetchResults = useCallback(
+    throttle(async () => {
       try {
+        // Check cache first
+        const cached = resultsCache.get('layer2');
+        if (cached) {
+          setLayer2Results(cached);
+          setLoading(false);
+          return;
+        }
+
         setLoading(true);
         const response = await fetch(`/api/vote/results?sessionId=${session.id}&layer=layer2&refresh=true`);
         if (!response.ok) {
           throw new Error('Failed to load layer 2 results');
         }
         const data = (await response.json()) as { results: Record<string, LayerResults> | null };
-        if (!cancelled) {
-          setLayer2Results(data.results ?? {});
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Failed to fetch layer 2 results:', getErrorMessage(error));
-          setLayer2Results({});
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
+        const results = data.results ?? {};
 
+        // Cache the results
+        resultsCache.set('layer2', results);
+        setLayer2Results(results);
+      } catch (error) {
+        console.error('Failed to fetch layer 2 results:', getErrorMessage(error));
+        setLayer2Results({});
+      } finally {
+        setLoading(false);
+      }
+    }, 2000), // Throttle to max once every 2 seconds
+    [session.id, resultsCache]
+  );
+
+  useEffect(() => {
     fetchResults();
+
+    // Set up polling interval for results updates
+    // Poll less frequently to reduce server load with multiple tables
+    const pollInterval = setInterval(fetchResults, 10000); // Poll every 10 seconds
+
     return () => {
-      cancelled = true;
+      clearInterval(pollInterval);
     };
-  }, [session.id, session.metadata.layer2Allocations]);
+  }, [fetchResults, session.metadata.layer2Allocations]);
 
   const painPointResults = useMemo<PainPointLayerResults[]>(() => {
     return PAIN_POINT_DEFINITIONS.map((painPoint) => ({

@@ -1,12 +1,13 @@
 'use client';
 
 import { Session } from '@/types/session';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { getErrorMessage } from '@/lib/utils';
 import { PAIN_POINT_DEFINITIONS } from '@/lib/constants';
 import { ChipType } from '@/types/vote';
 import { LayerResults, ScenarioResults } from '@/types/results';
+import { CacheManager, throttle } from '@/lib/performance';
 
 const CHIP_META: { key: ChipType; label: string; color: string }[] = [
   { key: 'time', label: 'Time', color: 'bg-chip-red' },
@@ -17,6 +18,9 @@ const CHIP_META: { key: ChipType; label: string; color: string }[] = [
 export function ResultsLayer1View({ session }: { session: Session }) {
   const [layerResults, setLayerResults] = useState<LayerResults | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Cache results for 5 seconds to avoid redundant API calls
+  const resultsCache = useMemo(() => new CacheManager<LayerResults>(5), []); // 5 second TTL
 
   const orderedPainPoints = useMemo(() => {
     if (!layerResults) return [];
@@ -36,36 +40,54 @@ export function ResultsLayer1View({ session }: { session: Session }) {
     }).sort((a, b) => (b.scenario.totals.totalChips ?? 0) - (a.scenario.totals.totalChips ?? 0));
   }, [layerResults]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchResults = async () => {
+  // Throttled fetch function to prevent rapid repeated API calls
+  // This is important when 100+ participants complete voting around the same time
+  const fetchResults = useCallback(
+    throttle(async () => {
       try {
+        // Check cache first
+        const cached = resultsCache.get('layer1');
+        if (cached) {
+          setLayerResults(cached);
+          setLoading(false);
+          return;
+        }
+
         setLoading(true);
         const response = await fetch(`/api/vote/results?sessionId=${session.id}&layer=layer1&refresh=true`);
         if (!response.ok) throw new Error('Failed to load results');
 
         const data = (await response.json()) as { results: LayerResults | null };
-        if (!cancelled) {
-          setLayerResults(data.results ?? null);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Failed to fetch results:', getErrorMessage(error));
+        const results = data.results ?? null;
+
+        if (results) {
+          // Cache the results
+          resultsCache.set('layer1', results);
+          setLayerResults(results);
+        } else {
           setLayerResults(null);
         }
+      } catch (error) {
+        console.error('Failed to fetch results:', getErrorMessage(error));
+        setLayerResults(null);
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
-    };
+    }, 2000), // Throttle to max once every 2 seconds
+    [session.id, resultsCache]
+  );
 
+  useEffect(() => {
     fetchResults();
+
+    // Set up polling interval for results updates
+    // Poll less frequently to reduce server load
+    const pollInterval = setInterval(fetchResults, 10000); // Poll every 10 seconds
+
     return () => {
-      cancelled = true;
+      clearInterval(pollInterval);
     };
-  }, [session.id, session.metadata.layer1Allocations]);
+  }, [fetchResults, session.metadata.layer1Allocations]);
 
   if (loading || !layerResults) {
     return (

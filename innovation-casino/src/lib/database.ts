@@ -96,7 +96,14 @@ function ensureSolutionsByPainPoint(
       return acc;
     }, {});
 
-    merged[painPointId] = (entries ?? []).map((entry) => {
+    let normalizedEntries: SolutionScenario[] = [];
+    if (Array.isArray(entries)) {
+      normalizedEntries = entries as SolutionScenario[];
+    } else if (entries && typeof entries === 'object') {
+      normalizedEntries = Object.values(entries as Record<string, SolutionScenario>);
+    }
+
+    merged[painPointId] = normalizedEntries.map((entry) => {
       const template = fallbackMap[entry.id];
       if (template) {
         return {

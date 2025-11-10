@@ -30,6 +30,8 @@ export const CHIP_COLORS: Record<ChipType, string> = {
 
 export const DEFAULT_VOTING_DURATION = 90; // seconds
 
+export const SESSION_DISPLAY_NAME = 'COST Leadership Forum';
+
 export interface SolutionDefinition {
   id: string;
   painPointId: string;

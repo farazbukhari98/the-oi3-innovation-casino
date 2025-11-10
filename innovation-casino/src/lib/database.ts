@@ -81,10 +81,41 @@ function ensureScenarioRecord(
 function ensureSolutionsByPainPoint(
   solutions?: Record<string, SolutionScenario[]>
 ): Record<string, SolutionScenario[]> {
-  if (solutions && Object.keys(solutions).length > 0) {
-    return solutions;
+  const defaults = cloneSolutionsRecord();
+
+  if (!solutions || Object.keys(solutions).length === 0) {
+    return defaults;
   }
-  return cloneSolutionsRecord();
+
+  const merged: Record<string, SolutionScenario[]> = { ...defaults };
+
+  Object.entries(solutions).forEach(([painPointId, entries]) => {
+    const fallback = defaults[painPointId] ?? [];
+    const fallbackMap = fallback.reduce<Record<string, SolutionScenario>>((acc, solution) => {
+      acc[solution.id] = solution;
+      return acc;
+    }, {});
+
+    merged[painPointId] = (entries ?? []).map((entry) => {
+      const template = fallbackMap[entry.id];
+      if (template) {
+        return {
+          ...template,
+          ...entry,
+          boldness: entry.boldness ?? template.boldness,
+          innovationLabel: entry.innovationLabel ?? template.innovationLabel,
+        };
+      }
+
+      return {
+        ...entry,
+        boldness: entry.boldness ?? 'safe_bet',
+        innovationLabel: entry.innovationLabel ?? 'Innovation Bet',
+      };
+    });
+  });
+
+  return merged;
 }
 
 export type SessionSettingsOverride = Partial<Omit<Session['settings'], 'layerDurations'>> & {

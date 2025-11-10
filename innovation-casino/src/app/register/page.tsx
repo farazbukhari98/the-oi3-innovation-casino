@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { CasinoEnvironment } from '@/components/casino/CasinoEnvironment';
 import { Session } from '@/types/session';
 import { getErrorMessage } from '@/lib/utils';
+import { SESSION_DISPLAY_NAME } from '@/lib/constants';
 
 function RegisterPageContent() {
   const searchParams = useSearchParams();
@@ -100,12 +101,6 @@ function RegisterPageContent() {
     );
   }
 
-  const primaryScenario =
-    sessionData.scenarios[sessionData.scenarioOrder[0]] ?? {
-      title: 'Innovation Scenario',
-      description: '',
-    };
-
   return (
     <CasinoEnvironment>
       <div className="min-h-screen flex items-center justify-center px-4 py-16">
@@ -133,7 +128,7 @@ function RegisterPageContent() {
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Session In Play</p>
                 <p className="text-sm text-gray-300">
-                  {primaryScenario.title || 'Innovation Scenario'}
+                  {SESSION_DISPLAY_NAME}
                 </p>
               </div>
             </div>

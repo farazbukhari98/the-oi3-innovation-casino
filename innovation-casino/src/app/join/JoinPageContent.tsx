@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '@/hooks/useSession';
 import { motion } from 'framer-motion';
 import { CasinoEnvironment } from '@/components/casino/CasinoEnvironment';
+import { SESSION_DISPLAY_NAME } from '@/lib/constants';
 
 export default function JoinPageContent() {
   const router = useRouter();
@@ -94,7 +95,7 @@ export default function JoinPageContent() {
               🔔 Welcome to the Table
             </p>
             <h1 className="text-4xl md:text-5xl font-heading text-gold-gradient">
-              Innovation Casino Session
+              {SESSION_DISPLAY_NAME}
             </h1>
           </div>
 
@@ -106,10 +107,10 @@ export default function JoinPageContent() {
                 <span>💰</span>
               </div>
               <h2 className="text-2xl font-heading text-white">
-                {session.scenarios[session.scenarioOrder[0]]?.title || 'Ready for innovation?'}
+                {SESSION_DISPLAY_NAME}
               </h2>
               <p className="text-gray-300 text-sm">
-                {session.scenarios[session.scenarioOrder[0]]?.description || 'Facilitator will reveal the full slate shortly.'}
+                Welcome to the COST Leadership Forum Member Access lounge—your facilitator will open the tables shortly.
               </p>
             </div>
 
